@@ -1,0 +1,11 @@
+nameOverride: ""
+fullnameOverride: ""
+
+public-web:
+  enabled: true
+
+api:
+  enabled: true
+
+ocelot:
+  enabled: true
