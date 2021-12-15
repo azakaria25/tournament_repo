@@ -1,0 +1,99 @@
+# Default values for public-web
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+avp: "faseh-ai/data/public-web/test"
+dockerAvp: "faseh-ai/data/docker"
+
+# deploy this chart or not.
+enabled: false
+
+replicaCount: <replicaCount>
+
+image:
+  repository: tbsazdevacr.azurecr.io/sfda/fasehai/public-web
+  tag: "v1.0.5-feature-gitops-20211214"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+- name: public-web-registry-secret
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+  annotations:
+    # if you are using cloud provider such as azure and you need to get a private load balancer IP
+    #service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # This configuration to enable gzip module to compress the static files
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+       gzip            on;
+       gzip_min_length 1000;
+       gzip_proxied    expired no-cache no-store private auth;
+       gzip_types      application/javascript application/x-javascript text/javascript text/xml text/css;
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: <host>
+      paths:
+      - /
+  # tls:
+  #    - secretName: secret-name
+  #      hosts:
+  #        - host-dns
+
+resources:
+  limits:
+    cpu: <limits.cpu>
+    memory: <limits.memory>
+  requests:
+    cpu: <requests.cpu>
+    memory: <requests.memory>
+
+autoscaling:
+  enabled: false
+  minReplicas: <autoscaling.minReplicas>
+  maxReplicas: <autoscaling.maxReplicas>
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+config:
+  baseUrl: <config.baseUrl>
+  issuer: <config.issuer>
+  apis:
+    default:
+      url: <config.apis.default.url>
