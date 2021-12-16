@@ -1,0 +1,22 @@
+{{- if .Values.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "backend.config-map.fullname" . }}
+  annotations:
+    avp.kubernetes.io/path: {{ .Values.avp }}
+data:
+  config: |-
+      FLASK_CONFIG={{ .Values.config.fLASK_CONFIG }}
+      DB_USER={{ .Values.config.dB_USER }}
+      DB_PASSWORD={{ .Values.config.dB_PASSWORD }}
+      DB_NAME={{ .Values.config.dB_NAME }}
+      DB_HOST={{ .Values.config.dB_HOST }}
+      DB_PORT={{ .Values.config.dB_PORT }}
+      DB_FIRS_USER={{ .Values.config.dB_FIRS_USER }}
+      DB_FIRS_PASSWORD={{ .Values.config.dB_FIRS_PASSWORD }}
+      DB_FIRS_NAME={{ .Values.config.dB_FIRS_NAME }}
+      DB_FIRS_HOST={{ .Values.config.dB_FIRS_HOST }}
+      DB_FIRS_PORT={{ .Values.config.dB_FIRS_PORT }}
+      
+{{- end }}
