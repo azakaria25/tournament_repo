@@ -4,7 +4,7 @@ fullnameOverride: ""
 public-web:
   enabled: true
 
-api:
+backend:
   enabled: true
 
 ocelot:
