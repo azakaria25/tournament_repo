@@ -45,18 +45,6 @@ spec:
             value: {{ include "backend.environment" . }}
           - name: ASPNETCORE_URLS
             value: http://0.0.0.0:8081
-          livenessProbe:
-            httpGet:
-              path:  {{ .Values.deployment.probes.path }} 
-              port: {{ .Values.deployment.probes.port }} 
-            initialDelaySeconds:  {{ .Values.deployment.probes.initDelay | default 60 }}
-            periodSeconds: {{ .Values.deployment.probes.period | default 10 }}
-          readinessProbe:
-            httpGet:
-              path:  {{ .Values.deployment.probes.path }} 
-              port: {{ .Values.deployment.probes.port }} 
-            initialDelaySeconds:  {{ .Values.deployment.probes.initDelay | default 60 }}
-            periodSeconds: {{ .Values.deployment.probes.period | default 10 }}
           volumeMounts:
           - name: config-vol
             mountPath: "/app/appsettings.json"
