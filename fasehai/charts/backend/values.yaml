@@ -2,8 +2,8 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-avp: "fasehai/data/backend/test"
-dockerAvp: "fasehai/data/docker"
+avp: "aamalymarketplace/data/fasehai/backend/test"
+dockerAvp: "aamalymarketplace/data/docker"
 
 # deploy this chart or not.
 enabled: false
