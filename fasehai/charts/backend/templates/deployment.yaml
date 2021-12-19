@@ -47,8 +47,8 @@ spec:
             value: http://0.0.0.0:8081
           volumeMounts:
           - name: config-vol
-            mountPath: "/app/appsettings.json"
-            subPath: appsettings.json
+            mountPath: "/docker_files/.env.test"
+            subPath: .env.tes
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
