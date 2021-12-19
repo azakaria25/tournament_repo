@@ -6,7 +6,7 @@ metadata:
   annotations:
     avp.kubernetes.io/path: {{ .Values.avp }}
 data:
-  .env.tes: |-
+  .env.test: |-
       FLASK_CONFIG={{ .Values.config.fLASK_CONFIG }}
       DB_USER={{ .Values.config.dB_USER }}
       DB_PASSWORD={{ .Values.config.dB_PASSWORD }}
