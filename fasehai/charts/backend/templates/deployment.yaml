@@ -38,13 +38,13 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8081
+              containerPort: 5000
               protocol: TCP
           env:
           - name: ASPNETCORE_ENVIRONMENT
             value: {{ include "backend.environment" . }}
           - name: ASPNETCORE_URLS
-            value: http://0.0.0.0:8081
+            value: http://0.0.0.0:5000
           volumeMounts:
           - name: config-vol
             mountPath: "/docker_files/.env.test"
