@@ -48,7 +48,7 @@ spec:
           volumeMounts:
           - name: config-vol
             mountPath: "/docker_files/.env.test"
-            subPath: .env.tes
+            subPath: .env.test
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
