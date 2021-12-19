@@ -40,21 +40,11 @@ spec:
             - name: http
               containerPort: 5000
               protocol: TCP
-          env:
-          - name: ASPNETCORE_ENVIRONMENT
-            value: {{ include "backend.environment" . }}
-          - name: ASPNETCORE_URLS
-            value: http://0.0.0.0:5000
-          volumeMounts:
-          - name: config-vol
-            mountPath: "./docker_files/.env.test"
-            subPath: ".env.test"
+          envFrom:
+          - configMapRef:
+              name: {{ include "backend.config-map.fullname" . }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      volumes:
-      - name: config-vol
-        configMap:
-          name: {{ include "backend.config-map.fullname" . }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
