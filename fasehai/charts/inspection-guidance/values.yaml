@@ -10,7 +10,6 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "v3.2.0"
 
-namespace: sfda-faseh-ai
 imagePullSecrets: 
   - name: acrsfda-secret
 nameOverride: ""
