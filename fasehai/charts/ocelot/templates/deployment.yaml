@@ -1,0 +1,88 @@
+{{- if .Values.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ocelot.fullname" . }}
+  annotations:
+    avp.kubernetes.io/path: {{ .Values.avp }}
+  labels:
+    {{- include "ocelot.labels" . | nindent 4 }}
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "ocelot.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "ocelot.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "ocelot.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: {{ include "ocelot.environment" . }}
+          - name: ASPNETCORE_URLS
+            value: http://0.0.0.0:8081
+          livenessProbe:
+            httpGet:
+              path:  {{ .Values.deployment.probes.path }} 
+              port: {{ .Values.deployment.probes.port }} 
+            initialDelaySeconds:  {{ .Values.deployment.probes.initDelay | default 60 }}
+            periodSeconds: {{ .Values.deployment.probes.period | default 10 }}
+          readinessProbe:
+            httpGet:
+              path:  {{ .Values.deployment.probes.path }} 
+              port: {{ .Values.deployment.probes.port }} 
+            initialDelaySeconds:  {{ .Values.deployment.probes.initDelay | default 60 }}
+            periodSeconds: {{ .Values.deployment.probes.period | default 10 }}
+          volumeMounts:
+          - name: config-vol
+            mountPath: "/app/appsettings.json"
+            subPath: appsettings.json
+          - name: ocelot-vol
+            mountPath: "/app/configuration.json"
+            subPath: configuration.json
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+      - name: config-vol
+        configMap:
+          name: {{ include "ocelot.config-map.fullname" . }}
+      - name: ocelot-vol
+        configMap:
+          name: {{ include "ocelot.config-map-ocelot.fullname" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
