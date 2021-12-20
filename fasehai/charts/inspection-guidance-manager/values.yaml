@@ -90,3 +90,4 @@ env:
   MSSQL_USERNAME: sfda_faseh_ai_mozn
   SA_PASSWORD: m8JsHZZQzdSejuEGxJUU
   PROJECT_NAME: Inspection Guidance Manager Service
+  MAX_WORKERS: 2
