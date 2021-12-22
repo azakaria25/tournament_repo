@@ -42,7 +42,7 @@ spec:
               protocol: TCP
           volumeMounts:
           - name: config-vol
-            mountPath: "/usr/share/nginx/html/assets/configuration.js"
+            mountPath: "/usr/share/nginx/html/assets/config/configuration.js"
             subPath: configuration.js
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
