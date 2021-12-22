@@ -3,3 +3,8 @@ backend:
   # if you want to split the hosts "backend, front end ..etc" into more than one cluster, you can choose what to deploy in each release.
   # true means that this will be deployed within your release.
   enabled: true
+ocelot:
+  # enabled: true|false,
+  # if you want to split the hosts "backend, front end ..etc" into more than one cluster, you can choose what to deploy in each release.
+  # true means that this will be deployed within your release.
+  enabled: true
