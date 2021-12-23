@@ -12,7 +12,7 @@ replicaCount: <replicaCount>
 
 image:
   repository: tbsazdevacr.azurecr.io/sfda/fasehai/public-web
-  tag: "v1.0.8-feature-gitops-20211214"
+  tag: "v1.0.9-feature-gitops-20211214"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
