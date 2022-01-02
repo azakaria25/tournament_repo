@@ -12,7 +12,7 @@ replicaCount: <replicaCount>
 
 image:
   repository: tbsazdevacr.azurecr.io/sfda/fasehai/backend
-  tag: "v1.0.4-feature-gitops-20211216"
+  tag: "v1.0.5-feature-gitops-20211216"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
@@ -114,3 +114,4 @@ config:
   dB_FIRS_NAME: <config.dB_FIRS_NAME>
   dB_FIRS_HOST: <config.dB_FIRS_HOST>
   dB_FIRS_PORT: <config.dB_FIRS_PORT>
+  iNSPECTION_GUIDANCE_URL: <config.iNSPECTION_GUIDANCE_URL>
