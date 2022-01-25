@@ -91,17 +91,4 @@ env:
   SA_PASSWORD: m8JsHZZQzdSejuEGxJUU
   PROJECT_NAME: Inspection Guidance Manager Service
   MAX_WORKERS: 2
-  ANALYTICS: /analytics
-  RULE_RETRIEVE_ALL_ACTIVE_CONFIGS: /rule-retrieve-all-active-configs
-  RULE_RETRIEVE_HS_CODE_SUBGROUPS: /rule-retrieve-hs-code-subgroups
-  RANDOM_RETRIEVE_HS_CODE_RISK_SCORES: /random-retrieve-hs-code-risk-scores
-  RANDOM_RETRIEVE_ACTIVE_CONFIG_BY_PORT_NO: /random-retrieve-active-config-by-port-no
-  ANOMALY_RETRIEVE_ACTIVE_DUP_REQUEST_CONFIG: /anomaly-retrieve-active-dup-request-config
-  ANOMALY_RETRIEVE_ACTIVE_RARE_ITEM_CONFIG: /anomaly-retrieve-active-rare-item-config
-  RISK_RETRIEVE_ACTIVE_CONFIG: /risk-retrieve-active-config
-  RISK_RETRIEVE_PRODUCT_RISK_SCORES: /risk-retrieve-product-risk-scores
-  COUNTRY_RETRIEVE_ALL_ACTIVE_CONFIGS: /country-retrieve-all-active-configs
-  COUNTRY_RETRIEVE_ACTIVE_CONFIGS_BY_COUNTRY: /country-retrieve-active-configs-by-country
-  COMPANIES_RETRIEVE_ALL_ACTIVE_CONFIGS: /companies-retrieve-all-active-configs
-  COMPANIES_RETRIEVE_ACTIVE_CONFIG_BY_COMPANY_NAME: /companies-retrieve-active-configs-by-company-name
-  INSPECTION_GUIDANCE_OUTPUT: /inspection-guidance-output
+
