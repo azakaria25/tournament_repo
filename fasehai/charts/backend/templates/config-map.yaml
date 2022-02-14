@@ -18,5 +18,6 @@ data:
   "DB_FIRS_HOST": {{ .Values.config.dB_FIRS_HOST }}
   "DB_FIRS_PORT": {{ .Values.config.dB_FIRS_PORT }}
   "INSPECTION_GUIDANCE_URL": {{ .Values.config.iNSPECTION_GUIDANCE_URL }}
+  "SECRET_KEY": {{ .Values.config.sECRET_KEY }}
       
 {{- end }}
