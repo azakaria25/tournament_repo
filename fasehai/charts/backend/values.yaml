@@ -115,3 +115,4 @@ config:
   dB_FIRS_HOST: <config.dB_FIRS_HOST>
   dB_FIRS_PORT: <config.dB_FIRS_PORT>
   iNSPECTION_GUIDANCE_URL: <config.iNSPECTION_GUIDANCE_URL>
+  sECRET_KEY: <config.sECRET_KEY>
