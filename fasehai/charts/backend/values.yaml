@@ -109,6 +109,7 @@ config:
   dB_NAME: <config.dB_NAME>
   dB_HOST: <config.dB_HOST>
   dB_PORT: <config.dB_PORT>
+  dB_DRIVER: <config.dB_DRIVER>
   dB_FIRS_USER: <config.dB_FIRS_USER>
   dB_FIRS_PASSWORD: <config.dB_FIRS_PASSWORD>
   dB_FIRS_NAME: <config.dB_FIRS_NAME>
