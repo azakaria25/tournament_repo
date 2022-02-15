@@ -12,6 +12,7 @@ data:
   "DB_NAME": {{ .Values.config.dB_NAME }}
   "DB_HOST": {{ .Values.config.dB_HOST }}
   "DB_PORT": {{ .Values.config.dB_PORT }}
+  "DB_DRIVER": {{ .Values.config.dB_DRIVER }}
   "DB_FIRS_USER": {{ .Values.config.dB_FIRS_USER }}
   "DB_FIRS_PASSWORD": {{ .Values.config.dB_FIRS_PASSWORD }}
   "DB_FIRS_NAME": {{ .Values.config.dB_FIRS_NAME }}
