@@ -62,7 +62,7 @@ resources:
     cpu: "4"
     memory: 4000Mi
   requests:
-    cpu: "4"
+    cpu: 2000m
     memory: 2000Mi
 
 autoscaling:
