@@ -8,8 +8,7 @@ image:
   repository: tbsazacrsfda.azurecr.io/sfda/dev.thiqah_inspection_guidance_api
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v3.8.1-LT"
-
+  tag: "v3.2.2-LT"
 
 imagePullSecrets: 
   - name: acrsfda-secret
@@ -59,11 +58,11 @@ ingress:
 
 resources:
   limits:
-    cpu: 3000m
-    memory: 4000Mi
-  requests:
-    cpu: 2000m
+    cpu: "2"
     memory: 2000Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
 
 autoscaling:
   enabled: false
