@@ -12,7 +12,7 @@ replicaCount: <replicaCount>
 
 image:
   repository: tbsazdevacr.azurecr.io/sfda/fasehai/public-web
-  tag: "v1.0.19-develop"
+  tag: "v1.0.20-develop"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
