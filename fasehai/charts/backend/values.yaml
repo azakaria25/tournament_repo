@@ -12,7 +12,7 @@ replicaCount: <replicaCount>
 
 image:
   repository: tbsazdevacr.azurecr.io/sfda/fasehai/backend
-  tag: "v1.0.8-develop"
+  tag: "v1.0.17-develop"
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
@@ -109,9 +109,11 @@ config:
   dB_NAME: <config.dB_NAME>
   dB_HOST: <config.dB_HOST>
   dB_PORT: <config.dB_PORT>
+  dB_DRIVER: <config.dB_DRIVER>
   dB_FIRS_USER: <config.dB_FIRS_USER>
   dB_FIRS_PASSWORD: <config.dB_FIRS_PASSWORD>
   dB_FIRS_NAME: <config.dB_FIRS_NAME>
   dB_FIRS_HOST: <config.dB_FIRS_HOST>
   dB_FIRS_PORT: <config.dB_FIRS_PORT>
   iNSPECTION_GUIDANCE_URL: <config.iNSPECTION_GUIDANCE_URL>
+  sECRET_KEY: <config.sECRET_KEY>
