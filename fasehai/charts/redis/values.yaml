@@ -20,10 +20,7 @@ global:
   redis:
     password: "REDIS_PASSWORD"
 
-containerSecurityContext:
-  enabled: true
-  runAsUser: 1001
-  runAsNonRoot: true
+
 ## @section Common parameters
 ##
 
@@ -269,7 +266,8 @@ master:
   ##
   containerSecurityContext:
     enabled: true
-    runAsUser: 1001
+    runAsNonRoot: true
+    runAsUser: 1000
   ## @param master.kind Use either Deployment or StatefulSet (default)
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
   ##
@@ -640,7 +638,8 @@ replica:
   ##
   containerSecurityContext:
     enabled: true
-    runAsUser: 1001
+    runAsNonRoot: true
+    runAsUser: 1000
   ## @param replica.schedulerName Alternate scheduler for Redis&trade; replicas pods
   ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
   ##
@@ -1082,7 +1081,8 @@ sentinel:
   ##
   containerSecurityContext:
     enabled: true
-    runAsUser: 1001
+    runAsNonRoot: true
+    runAsUser: 1000
   ## @param sentinel.lifecycleHooks for the Redis&trade; sentinel container(s) to automate configuration before or after startup
   ##
   lifecycleHooks: {}
@@ -1341,7 +1341,8 @@ metrics:
   ##
   containerSecurityContext:
     enabled: true
-    runAsUser: 1001
+    runAsNonRoot: true
+    runAsUser: 1000
   ## @param metrics.extraVolumes Optionally specify extra list of additional volumes for the Redis&trade; metrics sidecar
   ##
   extraVolumes: []
