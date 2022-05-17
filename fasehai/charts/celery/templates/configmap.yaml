@@ -58,6 +58,6 @@ data:
   CELERY_BEATS_CONCURRENCY_NO: {{ .Values.env.CELERY_BEATS_CONCURRENCY_NO | quote }}  
   CELERY_FLOWER_PORT: {{ .Values.env.CELERY_FLOWER_PORT | quote }}  
 
-  JAEGER_PROFILE: "true"
+  JAEGER_PROFILE: "false"
   JAEGER_HOST: {{ .Values.env.JAEGER_HOST | quote }}  
   JAEGER_PORT: {{ .Values.env.JAEGER_PORT | quote }}  

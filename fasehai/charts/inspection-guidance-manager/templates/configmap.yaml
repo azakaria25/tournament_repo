@@ -27,4 +27,4 @@ data:
   COMPANIES_RETRIEVE_ACTIVE_CONFIG_BY_COMPANY_NAME: /companies-retrieve-active-configs-by-company-name
   INSPECTION_GUIDANCE_OUTPUT: /inspection-guidance-output
   MAX_WORKERS: "2"
-  JAEGER_PROFILE: "true"
+  JAEGER_PROFILE: "false"
