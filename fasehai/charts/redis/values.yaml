@@ -268,6 +268,9 @@ master:
     enabled: true
     runAsNonRoot: true
     runAsUser: 1000
+    capabilities:
+      drop:
+        - ALL
   ## @param master.kind Use either Deployment or StatefulSet (default)
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
   ##
@@ -640,6 +643,9 @@ replica:
     enabled: true
     runAsNonRoot: true
     runAsUser: 1000
+    capabilities:
+      drop:
+        - ALL
   ## @param replica.schedulerName Alternate scheduler for Redis&trade; replicas pods
   ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
   ##
@@ -1083,6 +1089,9 @@ sentinel:
     enabled: true
     runAsNonRoot: true
     runAsUser: 1000
+    capabilities:
+      drop:
+        - ALL
   ## @param sentinel.lifecycleHooks for the Redis&trade; sentinel container(s) to automate configuration before or after startup
   ##
   lifecycleHooks: {}
@@ -1343,6 +1352,9 @@ metrics:
     enabled: true
     runAsNonRoot: true
     runAsUser: 1000
+    capabilities:
+      drop:
+        - ALL
   ## @param metrics.extraVolumes Optionally specify extra list of additional volumes for the Redis&trade; metrics sidecar
   ##
   extraVolumes: []
