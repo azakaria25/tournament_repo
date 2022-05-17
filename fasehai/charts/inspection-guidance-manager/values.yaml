@@ -91,5 +91,4 @@ env:
   SA_PASSWORD: m8JsHZZQzdSejuEGxJUU
   PROJECT_NAME: Inspection Guidance Manager Service
   MAX_WORKERS: 2
-  JAEGER_PROFILE: True
 
