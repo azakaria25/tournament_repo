@@ -8,7 +8,7 @@ image:
   repository: tbsazacrsfda.azurecr.io/sfda/dev.thiqah_inspection_guidance_api
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v3.8.1-LT"
+  tag: "v3.23.5"
 
 imagePullSecrets: 
   - name: acrsfda-secret
@@ -89,3 +89,32 @@ env:
   SA_PASSWORD: m8JsHZZQzdSejuEGxJUU
   PROJECT_NAME: Inspection Guidance Service
   MAX_WORKERS: 2
+
+  RABBITMQ_PORT: 5672
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_DEFAULT_USER: queue
+  RABBITMQ_DEFAULT_PASS: password
+
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_USER: 
+  REDIS_PASSWORD: REDIS_PASSWORD
+  REDIS_DB_MODEL_NO: 0
+  REDIS_DB_QUERIES_NO: 1
+
+  CELERY_RESULTS_REDIS_DB_NO: 2
+  CELERY_REFRESH_RATE_SECONDS: 3600
+  CELERY_RETRY_BACKOFF_SECONDS: 600
+  CELERY_MAX_RETRIES: 2
+  CELERY_REQUEST_TIME_OUT: 600
+  CELERY_MODELS_QUEUE_NAME: models_queue
+  CELERY_QUERIES_QUEUE_NAME: queries_queue
+  CELERY_BEATS_QUEUE_NAME: beats_queue
+  CELERY_MODELS_WORKER_NO: 4
+  CELERY_QUERIES_CONCURRENCY_NO: 20
+  CELERY_BEATS_CONCURRENCY_NO: 1
+  CELERY_FLOWER_PORT: 4212
+
+  JAEGER_PROFILE: True
+  JAEGER_HOST: jaeger
+  JAEGER_PORT: 6831
