@@ -9,3 +9,15 @@ backend:
 
 ocelot:
   enabled: true
+
+redis:
+  enabled: true
+
+celery:
+  enabled: true
+
+rabbitmq:
+  enabled: true
+
+jaeger:
+  enabled: true
