@@ -20,6 +20,10 @@ global:
   redis:
     password: "REDIS_PASSWORD"
 
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1001
+  runAsNonRoot: true
 ## @section Common parameters
 ##
 
