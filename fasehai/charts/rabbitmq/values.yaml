@@ -529,12 +529,7 @@ topologySpreadConstraints: []
 ##
 podSecurityContext:
   enabled: true
-  runAsUser: 1000
-  runAsNonRoot: true
-  capabilities:
-    drop:
-      - ALL
-
+  fsGroup: 1001
 
 ## @param containerSecurityContext.enabled Enabled RabbitMQ containers' Security Context
 ## @param containerSecurityContext.runAsUser Set RabbitMQ containers' Security Context runAsUser
