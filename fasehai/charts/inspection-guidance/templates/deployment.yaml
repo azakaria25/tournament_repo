@@ -28,8 +28,8 @@ spec:
           #       - ALL
           #   runAsNonRoot: true
           #   runAsUser: 1000
-          args:
-          - /start.sh
+          # args:
+          # - /start.sh
           ports:
             - name: http
               containerPort: 80
