@@ -91,11 +91,11 @@ env:
   MAX_WORKERS: 2
 
   RABBITMQ_PORT: 5672
-  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_HOST: fasehai-rabbitmq
   RABBITMQ_DEFAULT_USER: queue
   RABBITMQ_DEFAULT_PASS: password
 
-  REDIS_HOST: redis
+  REDIS_HOST: fasehai-redis-master
   REDIS_PORT: 6379
   REDIS_USER: ""
   REDIS_PASSWORD: REDIS_PASSWORD
