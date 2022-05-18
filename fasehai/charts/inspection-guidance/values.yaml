@@ -56,13 +56,13 @@ ingress:
   host: faseh-ai.aks.thiqah.sa
   tls: []
 
-resources:
-  limits:
-    cpu: "2"
-    memory: 2000Mi
-  requests:
-    cpu: 100m
-    memory: 128Mi
+resources: {}
+  # limits:
+  #   cpu: "2"
+  #   memory: 2000Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
 
 autoscaling:
   enabled: false
