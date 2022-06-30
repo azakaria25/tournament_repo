@@ -10,6 +10,8 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "v3.23.7"
 
+# deploy this chart or not.
+enabled: false
 
 imagePullSecrets: 
   - name: acrsfda-secret
