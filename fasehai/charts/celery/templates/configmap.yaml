@@ -1,3 +1,4 @@
+{{- if .Values.enabled -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -60,4 +61,5 @@ data:
 
   JAEGER_PROFILE: "false"
   JAEGER_HOST: {{ .Values.env.JAEGER_HOST | quote }}  
-  JAEGER_PORT: {{ .Values.env.JAEGER_PORT | quote }}  
+  JAEGER_PORT: {{ .Values.env.JAEGER_PORT | quote }}
+  {{- end }}  
