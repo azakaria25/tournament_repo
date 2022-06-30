@@ -1,3 +1,4 @@
+{{- if .Values.enabled -}}
 {{- if (include "redis.createConfigmap" .) }}
 apiVersion: v1
 kind: ConfigMap
@@ -56,4 +57,5 @@ data:
     {{- end }}
     # End of sentinel configuration
   {{- end }}
+{{- end }}
 {{- end }}

@@ -20,6 +20,8 @@ global:
   redis:
     password: "REDIS_PASSWORD"
 
+# deploy this chart or not.
+enabled: false
 
 ## @section Common parameters
 ##

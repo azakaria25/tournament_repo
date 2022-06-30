@@ -1,3 +1,4 @@
+{{- if .Values.enabled -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -621,4 +622,5 @@ data:
     exec redis-server "${ARGS[@]}"
     {{- end }}
   {{- end }}
+{{- end }}
 {{- end }}

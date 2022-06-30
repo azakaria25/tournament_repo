@@ -1,3 +1,4 @@
+{{- if .Values.enabled -}}
 {{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -37,4 +38,5 @@ spec:
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
       app.kubernetes.io/component: metrics
+{{- end }}
 {{- end }}
