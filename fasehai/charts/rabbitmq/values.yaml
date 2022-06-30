@@ -17,6 +17,9 @@ global:
   imagePullSecrets: []
   storageClass: ""
 
+# deploy this chart or not.
+enabled: false
+
 ## @section RabbitMQ Image parameters
 ## Bitnami RabbitMQ image version
 ## ref: https://hub.docker.com/r/bitnami/rabbitmq/tags/

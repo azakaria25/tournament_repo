@@ -1,3 +1,4 @@
+{{- if .Values.enabled -}}
 {{- if and .Values.serviceAccount.create .Values.rbac.create }}
 kind: RoleBinding
 apiVersion: {{ include "common.capabilities.rbac.apiVersion" . }}
@@ -17,4 +18,5 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: {{ printf "%s-endpoint-reader" (include "common.names.fullname" .) }}
+{{- end }}
 {{- end }}

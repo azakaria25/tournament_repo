@@ -1,3 +1,4 @@
+{{- if .Values.enabled -}}
 {{- if .Values.pdb.create }}
 apiVersion: {{ include "common.capabilities.policy.apiVersion" . }}
 kind: PodDisruptionBudget
@@ -19,4 +20,5 @@ spec:
   {{- end }}
   selector:
     matchLabels: {{ include "common.labels.matchLabels" . | nindent 6 }}
+{{- end }}
 {{- end }}
