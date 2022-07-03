@@ -3,6 +3,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Chart.Name }}
+  annotations:
+    avp.kubernetes.io/path: {{ .Values.avp }}
 data:
   INSPECTION_GUIDANCE_MODELS_ROOT_PATH: {{ .Values.env.ROOT_PATH | quote }} 
   MODEL_MANAGER_HOST: {{ .Values.env.MODEL_MANAGER_HOST | quote }}  

@@ -3,6 +3,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Chart.Name }}
+  annotations:
+    avp.kubernetes.io/path: {{ .Values.avp }}
 data:
   CONFIG_DATABASE: {{ .Values.env.CONFIG_DATABASE | quote }}
   MSSQL_HOST: {{ .Values.env.MSSQL_HOST | quote }}

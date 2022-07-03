@@ -3,6 +3,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Chart.Name }}
+  annotations:
+    avp.kubernetes.io/path: {{ .Values.avp }}
   labels:
     app: {{ .Chart.Name }}
 spec:
