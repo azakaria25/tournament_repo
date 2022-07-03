@@ -1,0 +1,27 @@
+{{- if .Values.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fasehai-redis
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: fasehai-redis
+  template:
+    metadata:
+      labels:
+        app: fasehai-redis
+    spec:
+      containers:
+        - name: fasehai-redis
+          image: redis
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+{{- end }}
