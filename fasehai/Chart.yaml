@@ -20,14 +20,6 @@ version: 0.1.0
 # incremented each time you make changes to the application.
 appVersion: 1.0
 
-dependencies:
-  - name: common
-    repository: https://charts.bitnami.com/bitnami
-    tags:
-      - bitnami-common
-      - common
-    version: 1.x.x
-
     
 maintainers:
   - email: mabusaa@thiqah.sa
