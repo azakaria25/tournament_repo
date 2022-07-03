@@ -1,0 +1,63 @@
+# Default values for portal-redis
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# avp: ""
+# dockerAvp: ""
+
+# deploy this chart or not.
+enabled: true
+
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 6379
+  annotations:
+    # if you are using cloud provider such as azure and you need to get a private load balancer IP
+    #service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+
+resources:
+  limits:
+    cpu: "400m"
+    memory: "400Mi"
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+
+deployment:
+  probes:
+    path: /swagger/favicon-16x16.png
+    port: http
+    initDelay: 10
+    period: 10
