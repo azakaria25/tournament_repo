@@ -1,0 +1,27 @@
+{{- if .Values.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fasehai-rabbitmq
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: fasehai-rabbitmq
+  template:
+    metadata:
+      labels:
+        app: fasehai-rabbitmq
+    spec:
+      containers:
+        - name: fasehai-rabbitmq
+          image: rabbitmq
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - name: rabbitmq
+              containerPort: 5672
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+{{- end }}
