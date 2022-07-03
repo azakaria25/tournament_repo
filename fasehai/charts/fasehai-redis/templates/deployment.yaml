@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: fasehai-redis
-          image: bitnami/redis
+          image: redis
           imagePullPolicy: "IfNotPresent"
           ports:
             - name: redis

@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: fasehai-rabbitmq
-          image: bitnami/rabbitmq
+          image: rabbitmq
           imagePullPolicy: "IfNotPresent"
           ports:
             - name: rabbitmq
