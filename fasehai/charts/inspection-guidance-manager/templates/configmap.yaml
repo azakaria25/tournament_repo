@@ -31,6 +31,6 @@ data:
   INSPECTION_GUIDANCE_OUTPUT: /inspection-guidance-output
   RETRIEVE_ACTIVE_CONFIGS_BUNDLE: /retrieve-active-configs-bundle
 
-  MAX_WORKERS: "2"
+  MAX_WORKERS: {{ .Values.env.MAX_WORKERS | quote }}
   JAEGER_PROFILE: "false"
 {{- end }}
