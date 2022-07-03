@@ -85,11 +85,11 @@ env:
   PORT: 80
   MODEL_MANAGER_HOST: inspection-guidance-manager
   MODEL_MANAGER_PORT: 80
-  MSSQL_DATABASE: SFDA.FIRS
-  MSSQL_HOST: 172.25.12.22
-  MSSQL_PORT: 1433
-  MSSQL_USERNAME: sfda_faseh_ai_mozn
-  SA_PASSWORD: m8JsHZZQzdSejuEGxJUU
+  MSSQL_DATABASE: <config.dB_FIRS_NAME>
+  MSSQL_HOST: <config.dB_FIRS_HOST>
+  MSSQL_PORT: <config.dB_FIRS_PORT>
+  MSSQL_USERNAME: <config.dB_FIRS_USER>
+  SA_PASSWORD: <config.dB_FIRS_PASSWORD>
   PROJECT_NAME: Inspection Guidance Service
   MAX_WORKERS: 2
 
