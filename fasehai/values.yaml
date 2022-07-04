@@ -11,7 +11,7 @@ ocelot:
   enabled: true
 
 redis:
-  enabled: true
+  enabled: false
 
 celery:
   enabled: true
