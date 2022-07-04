@@ -1,3 +1,4 @@
+{{- if .Values.enabled -}}
 {{- if and (eq .Values.architecture "replication") .Values.sentinel.enabled (eq .Values.sentinel.service.type "NodePort") (or .Release.IsUpgrade .Values.sentinel.service.nodePorts.redis ) }}
 
 {{- range $i := until (int .Values.replica.replicaCount) }}
@@ -65,5 +66,6 @@ spec:
   selector:
     statefulset.kubernetes.io/pod-name: {{ template "common.names.fullname" $ }}-node-{{ $i }}
 ---
+{{- end }}
 {{- end }}
 {{- end }}

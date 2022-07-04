@@ -1,3 +1,4 @@
+{{- if .Values.enabled -}}
 {{- if and .Values.replica.autoscaling.enabled (not .Values.sentinel.enabled) }}
 apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
@@ -31,4 +32,5 @@ spec:
         name: memory
         targetAverageUtilization: {{ .Values.replica.autoscaling.targetMemory }}
     {{- end }}
+{{- end }}
 {{- end }}

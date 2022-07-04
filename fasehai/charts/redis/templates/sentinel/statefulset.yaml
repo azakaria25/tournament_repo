@@ -1,3 +1,4 @@
+{{- if .Values.enabled -}}
 {{- if or .Release.IsUpgrade (ne .Values.sentinel.service.type "NodePort")  .Values.sentinel.service.nodePorts.redis -}}
 {{- if and (eq .Values.architecture "replication") .Values.sentinel.enabled }}
 apiVersion: {{ include "common.capabilities.statefulset.apiVersion" . }}
@@ -680,5 +681,6 @@ spec:
         {{- include "common.storage.class" (dict "persistence" .Values.sentinel.persistence "global" .Values.global) | nindent 8 }}
     {{- end }}
   {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
