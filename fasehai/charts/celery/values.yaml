@@ -100,6 +100,8 @@ env:
   RABBITMQ_HOST: rabbitmq.aks.thiqah.sa
   RABBITMQ_DEFAULT_USER: fasehai
   RABBITMQ_DEFAULT_PASS: fasehai
+  RABBITMQ_VHOST: fasehai
+  RABBITMQ_V_HOST: fasehai
 
   REDIS_HOST: redis-cluster-master.saas-redis
   REDIS_PORT: 6379
