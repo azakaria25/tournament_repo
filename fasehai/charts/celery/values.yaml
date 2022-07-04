@@ -97,14 +97,14 @@ env:
   MAX_WORKERS: 2
 
   RABBITMQ_PORT: 5672
-  RABBITMQ_HOST: fasehai-rabbitmq
-  RABBITMQ_DEFAULT_USER: queue
-  RABBITMQ_DEFAULT_PASS: password
+  RABBITMQ_HOST: rabbitmq.aks.thiqah.sa
+  RABBITMQ_DEFAULT_USER: fasehai
+  RABBITMQ_DEFAULT_PASS: fasehai
 
-  REDIS_HOST: fasehai-redis-master
+  REDIS_HOST: redis-cluster-master.saas-redis
   REDIS_PORT: 6379
-  REDIS_USER: ""
-  REDIS_PASSWORD: REDIS_PASSWORD
+  REDIS_USER: "fasehai"
+  REDIS_PASSWORD: fasehai
   REDIS_DB_MODEL_NO: 0
   REDIS_DB_QUERIES_NO: 1
 
