@@ -40,7 +40,7 @@ securityContext: {}
   #   drop:
   #   - ALL
   # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
+  runAsNonRoot: true
   # runAsUser: 1000
 
 service:
@@ -59,7 +59,6 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-next-upstream-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
-  host: <host>
   tls: []
 
 resources: {}
