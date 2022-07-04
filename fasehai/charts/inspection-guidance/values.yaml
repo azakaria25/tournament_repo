@@ -59,7 +59,7 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-next-upstream-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
-  host: faseh-ai.aks.thiqah.sa
+  host: <host>
   tls: []
 
 resources: {}
@@ -96,15 +96,15 @@ env:
   PROJECT_NAME: Inspection Guidance Service
   MAX_WORKERS: 2
 
-  RABBITMQ_PORT: 5672
-  RABBITMQ_HOST: fasehai-rabbitmq
-  RABBITMQ_DEFAULT_USER: queue
-  RABBITMQ_DEFAULT_PASS: password
+  RABBITMQ_HOST: <config.RABBITMQ_HOST>
+  RABBITMQ_PORT: <config.RABBITMQ_PORT>
+  RABBITMQ_DEFAULT_USER: <config.RABBITMQ_DEFAULT_USER>
+  RABBITMQ_DEFAULT_PASS: <config.RABBITMQ_DEFAULT_PASS>
 
-  REDIS_HOST: fasehai-redis-master
-  REDIS_PORT: 6379
-  REDIS_USER: ""
-  REDIS_PASSWORD: REDIS_PASSWORD
+  REDIS_HOST: <config.REDIS_HOST>
+  REDIS_PORT: <config.REDIS_PORT>
+  REDIS_USER: <config.REDIS_USER>
+  REDIS_PASSWORD: <config.REDIS_PASSWORD>
   REDIS_DB_MODEL_NO: 0
   REDIS_DB_QUERIES_NO: 1
 

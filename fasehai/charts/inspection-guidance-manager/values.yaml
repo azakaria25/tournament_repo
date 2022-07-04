@@ -59,7 +59,7 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-next-upstream-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "180"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "180"
-  host: faseh-ai-manager.aks.thiqah.sa
+  host: <host>
   tls: []
 
 resources: {}
