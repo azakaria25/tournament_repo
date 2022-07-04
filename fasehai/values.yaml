@@ -19,5 +19,8 @@ celery:
 rabbitmq:
   enabled: true
 
-jaeger:
+inspection-guidance:
+  enabled: true
+
+inspection-guidance-manager:
   enabled: true

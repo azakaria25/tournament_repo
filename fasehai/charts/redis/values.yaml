@@ -21,7 +21,7 @@ global:
     password: "REDIS_PASSWORD"
 
 # deploy this chart or not.
-enabled: false
+enabled: true
 
 ## @section Common parameters
 ##
@@ -105,7 +105,7 @@ image:
 
 ## @param architecture Redis&trade; architecture. Allowed values: `standalone` or `replication`
 ##
-architecture: replication
+architecture: standalone
 ## Redis&trade; Authentication parameters
 ## ref: https://github.com/bitnami/bitnami-docker-redis#setting-the-server-password-on-first-run
 ##

@@ -6,14 +6,13 @@ metadata:
   annotations:
     avp.kubernetes.io/path: {{ .Values.avp }}
 data:
-  CONFIG_DATABASE: {{ .Values.env.CONFIG_DATABASE | quote }}
+  CONFIG_DATABASE: {{ .Values.env.MSSQL_DATABASE | quote }}
   MSSQL_HOST: {{ .Values.env.MSSQL_HOST | quote }}
   MSSQL_PORT: {{ .Values.env.MSSQL_PORT | quote }}
   MSSQL_USERNAME: {{ .Values.env.MSSQL_USERNAME | quote }}
   PORT: {{ .Values.env.PORT | quote }}
   PROJECT_NAME: {{ .Values.env.PROJECT_NAME | quote }}
   SA_PASSWORD: {{ .Values.env.SA_PASSWORD | quote }}
-  JAEGER_PROFILE: {{ .Values.env.JAEGER_PROFILE | quote }}
 
   ANALYTICS: /analytics
   RULE_RETRIEVE_ALL_ACTIVE_CONFIGS: /rule-retrieve-all-active-configs
@@ -31,6 +30,6 @@ data:
   INSPECTION_GUIDANCE_OUTPUT: /inspection-guidance-output
   RETRIEVE_ACTIVE_CONFIGS_BUNDLE: /retrieve-active-configs-bundle
 
-  MAX_WORKERS: "2"
+  MAX_WORKERS: {{ .Values.env.MAX_WORKERS | quote }}
   JAEGER_PROFILE: "false"
 {{- end }}

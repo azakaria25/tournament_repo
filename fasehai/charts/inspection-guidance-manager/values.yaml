@@ -89,12 +89,12 @@ affinity: {}
 
 env:
   PORT: 81
-  MSSQL_DATABASE: <config.dB_FIRS_NAME>
-  MSSQL_HOST: <config.dB_FIRS_HOST>
-  MSSQL_PORT: <config.dB_FIRS_PORT>
-  MSSQL_USERNAME: <config.dB_FIRS_USER>
-  SA_PASSWORD: <config.dB_FIRS_PASSWORD>
+  MSSQL_DATABASE: <config.dB_ai_config_NAME>
+  MSSQL_HOST: <config.dB_ai_config_HOST>
+  MSSQL_PORT: <config.dB_ai_config_PORT>
+  MSSQL_USERNAME: <config.dB_ai_config_USER>
+  SA_PASSWORD: <config.dB_ai_config_PASSWORD>
 
   PROJECT_NAME: Inspection Guidance Manager Service
-  MAX_WORKERS: 2
+  MAX_WORKERS: <config.max_workers>
 
