@@ -1,15 +1,14 @@
 import express from 'express';
 import cors from 'cors';
+import { Team, Match } from './types';
 
 const app = express();
 const port = process.env.PORT || 5000;
 
 // Enable CORS for all routes
 app.use(cors({
-  origin: 'http://localhost:3000',
-  methods: ['GET', 'POST', 'DELETE'],
-  allowedHeaders: ['Content-Type'],
-  credentials: true // Allow credentials
+  origin: ['https://thiqah-padel-tournament.vercel.app', 'http://localhost:3000'],
+  credentials: true
 }));
 
 app.use(express.json());
