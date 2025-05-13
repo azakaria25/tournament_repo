@@ -11,4 +11,12 @@ export interface Match {
   team1: Team | null;
   team2: Team | null;
   winner: Team | null;
+}
+
+export interface Tournament {
+  id: string;
+  name: string;
+  date: string;
+  teams: number;
+  status: 'active' | 'completed' | 'upcoming';
 } 

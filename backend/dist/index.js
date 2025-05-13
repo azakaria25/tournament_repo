@@ -9,15 +9,14 @@ const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
 // Enable CORS for all routes
 app.use((0, cors_1.default)({
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST', 'DELETE'],
-    allowedHeaders: ['Content-Type'],
-    credentials: true // Allow credentials
+    origin: ['https://thiqah-padel-tournament.vercel.app', 'http://localhost:3000'],
+    credentials: true
 }));
 app.use(express_1.default.json());
 // In-memory storage (replace with database in production)
 let teams = [];
 let matches = [];
+let tournaments = [];
 // Routes
 app.get('/api/teams', (req, res) => {
     res.json(teams);
@@ -31,6 +30,31 @@ app.post('/api/teams', (req, res) => {
     };
     teams.push(newTeam);
     res.status(201).json(newTeam);
+});
+app.put('/api/teams/:id', (req, res) => {
+    const { id } = req.params;
+    const { name, players } = req.body;
+    const teamIndex = teams.findIndex(team => team.id === id);
+    if (teamIndex === -1) {
+        return res.status(404).json({ error: 'Team not found' });
+    }
+    // Update team
+    teams[teamIndex] = Object.assign(Object.assign({}, teams[teamIndex]), { name,
+        players });
+    // Update team in any existing matches
+    matches.forEach(match => {
+        var _a, _b, _c;
+        if (((_a = match.team1) === null || _a === void 0 ? void 0 : _a.id) === id) {
+            match.team1 = teams[teamIndex];
+        }
+        if (((_b = match.team2) === null || _b === void 0 ? void 0 : _b.id) === id) {
+            match.team2 = teams[teamIndex];
+        }
+        if (((_c = match.winner) === null || _c === void 0 ? void 0 : _c.id) === id) {
+            match.winner = teams[teamIndex];
+        }
+    });
+    res.json(teams[teamIndex]);
 });
 app.delete('/api/teams/:id', (req, res) => {
     const { id } = req.params;
@@ -126,8 +150,47 @@ app.post('/api/matches/:id/winner', (req, res) => {
 });
 app.post('/api/teams/clear', (req, res) => {
     teams = []; // Clear all teams
-    matches = []; // Optionally clear matches if needed
+    matches = []; // Clear matches as well since they depend on teams
     res.json({ message: 'All teams cleared successfully' });
+});
+app.post('/api/matches/clear', (req, res) => {
+    matches = []; // Clear only matches
+    res.json({ message: 'Tournament bracket cleared successfully' });
+});
+// Tournament routes
+app.get('/api/tournaments', (req, res) => {
+    res.json(tournaments);
+});
+app.post('/api/tournaments', (req, res) => {
+    const { name, date } = req.body;
+    if (!name || !date) {
+        return res.status(400).json({ error: 'Name and date are required' });
+    }
+    const newTournament = {
+        id: Date.now().toString(),
+        name,
+        date,
+        teams: 0,
+        status: 'upcoming'
+    };
+    tournaments.push(newTournament);
+    res.status(201).json(newTournament);
+});
+app.get('/api/tournaments/:id/teams', (req, res) => {
+    const { id } = req.params;
+    const tournament = tournaments.find(t => t.id === id);
+    if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
+    }
+    res.json(teams);
+});
+app.get('/api/tournaments/:id/matches', (req, res) => {
+    const { id } = req.params;
+    const tournament = tournaments.find(t => t.id === id);
+    if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
+    }
+    res.json(matches);
 });
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
