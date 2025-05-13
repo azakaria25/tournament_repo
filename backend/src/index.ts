@@ -13,22 +13,6 @@ app.use(cors({
 
 app.use(express.json());
 
-// Types
-interface Team {
-  id: string;
-  name: string;
-  players: string[];
-}
-
-interface Match {
-  id: string;
-  round: number;
-  matchIndex: number;
-  team1: Team | null;
-  team2: Team | null;
-  winner: Team | null;
-}
-
 // In-memory storage (replace with database in production)
 let teams: Team[] = [];
 let matches: Match[] = [];
@@ -47,6 +31,38 @@ app.post('/api/teams', (req, res) => {
   };
   teams.push(newTeam);
   res.status(201).json(newTeam);
+});
+
+app.put('/api/teams/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, players } = req.body;
+  
+  const teamIndex = teams.findIndex(team => team.id === id);
+  if (teamIndex === -1) {
+    return res.status(404).json({ error: 'Team not found' });
+  }
+
+  // Update team
+  teams[teamIndex] = {
+    ...teams[teamIndex],
+    name,
+    players,
+  };
+
+  // Update team in any existing matches
+  matches.forEach(match => {
+    if (match.team1?.id === id) {
+      match.team1 = teams[teamIndex];
+    }
+    if (match.team2?.id === id) {
+      match.team2 = teams[teamIndex];
+    }
+    if (match.winner?.id === id) {
+      match.winner = teams[teamIndex];
+    }
+  });
+
+  res.json(teams[teamIndex]);
 });
 
 app.delete('/api/teams/:id', (req, res) => {
@@ -164,8 +180,13 @@ app.post('/api/matches/:id/winner', (req, res) => {
 
 app.post('/api/teams/clear', (req, res) => {
   teams = []; // Clear all teams
-  matches = []; // Optionally clear matches if needed
+  matches = []; // Clear matches as well since they depend on teams
   res.json({ message: 'All teams cleared successfully' });
+});
+
+app.post('/api/matches/clear', (req, res) => {
+  matches = []; // Clear only matches
+  res.json({ message: 'Tournament bracket cleared successfully' });
 });
 
 app.listen(port, () => {
