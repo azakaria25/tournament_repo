@@ -21,7 +21,8 @@ let tournaments: Tournament[] = [];
 interface TournamentDetails {
   id: string;
   name: string;
-  date: string;
+  month: string;
+  year: string;
   teams: Team[];
   matches: Match[];
   status: 'active' | 'completed' | 'upcoming';
@@ -95,8 +96,8 @@ app.delete('/api/teams/:id', (req, res) => {
   res.status(200).json({ message: 'Team deleted successfully' });
 });
 
-app.post('/api/tournament/start', (req, res) => {
-  const tournamentId = req.query.tournamentId as string;
+app.post('/api/tournaments/:id/start', (req, res) => {
+  const tournamentId = req.params.id;
   const tournament = tournamentDetails[tournamentId];
   
   if (!tournament) {
@@ -104,9 +105,10 @@ app.post('/api/tournament/start', (req, res) => {
   }
 
   if (tournament.teams.length < 2) {
-    return res.status(400).json({ error: 'At least 2 teams are required to start a tournament' });
+    return res.status(400).json({ error: 'Need at least 2 teams to start a tournament' });
   }
 
+  // Create matches for the tournament
   const matches = createMatches(tournament.teams);
   tournament.matches = matches;
   tournament.status = 'active';
@@ -117,7 +119,7 @@ app.post('/api/tournament/start', (req, res) => {
     tournaments[tournamentIndex].status = 'active';
   }
 
-  res.json(matches);
+  res.json(tournament);
 });
 
 app.get('/api/matches', (req, res) => {
@@ -201,28 +203,30 @@ app.get('/api/tournaments', (req, res) => {
 });
 
 app.post('/api/tournaments', (req, res) => {
-  const { name, date } = req.body;
-  if (!name || !date) {
-    return res.status(400).json({ error: 'Name and date are required' });
+  const { name, month, year } = req.body;
+  if (!name || !month || !year) {
+    return res.status(400).json({ error: 'Name, month, and year are required' });
   }
 
   const newTournament: Tournament = {
     id: Date.now().toString(),
     name,
-    date,
+    month,
+    year,
     teams: 0,
     status: 'upcoming'
   };
 
   // Initialize tournament details
-  tournamentDetails[newTournament.id] = {
+  const tournamentDetail: TournamentDetails = {
     ...newTournament,
     teams: [],
     matches: []
   };
+  tournamentDetails[newTournament.id] = tournamentDetail;
 
   tournaments.push(newTournament);
-  res.status(201).json(newTournament);
+  res.status(201).json(tournamentDetail);
 });
 
 app.get('/api/tournaments/:id', (req, res) => {
@@ -249,13 +253,13 @@ app.get('/api/tournaments/:id/teams', (req, res) => {
 
 app.get('/api/tournaments/:id/matches', (req, res) => {
   const { id } = req.params;
-  const tournament = tournaments.find(t => t.id === id);
+  const tournament = tournamentDetails[id];
   
   if (!tournament) {
     return res.status(404).json({ error: 'Tournament not found' });
   }
 
-  res.json(matches);
+  res.json(tournament.matches);
 });
 
 app.post('/api/tournaments/:id/teams', (req, res) => {
@@ -324,6 +328,63 @@ function createMatches(teams: Team[]): Match[] {
 
   return matches;
 }
+
+app.post('/api/tournaments/update-statuses', (req, res) => {
+  const currentDate = new Date();
+  const currentMonth = currentDate.toLocaleString('default', { month: 'long' }).toLowerCase();
+  const currentYear = currentDate.getFullYear().toString();
+
+  // Get month index (0-11) for comparison
+  const getMonthIndex = (month: string) => {
+    const months = ['january', 'february', 'march', 'april', 'may', 'june', 
+                   'july', 'august', 'september', 'october', 'november', 'december'];
+    return months.indexOf(month.toLowerCase());
+  };
+
+  const currentMonthIndex = getMonthIndex(currentMonth);
+  console.log('Current month index:', currentMonthIndex, 'Current month:', currentMonth);
+
+  // Update tournament statuses
+  tournaments.forEach(tournament => {
+    const tournamentMonthIndex = getMonthIndex(tournament.month);
+    const tournamentYear = parseInt(tournament.year);
+    const currentYearNum = parseInt(currentYear);
+
+    console.log('Tournament:', tournament.name, 'Month index:', tournamentMonthIndex, 'Year:', tournamentYear);
+
+    let newStatus: 'active' | 'completed' | 'upcoming';
+
+    if (tournamentYear < currentYearNum) {
+      // Past year tournaments are completed
+      newStatus = 'completed';
+    } else if (tournamentYear > currentYearNum) {
+      // Future year tournaments are upcoming
+      newStatus = 'upcoming';
+    } else {
+      // Same year, check month
+      if (tournamentMonthIndex < currentMonthIndex) {
+        // Past month tournaments are completed
+        newStatus = 'completed';
+      } else if (tournamentMonthIndex > currentMonthIndex) {
+        // Future month tournaments are upcoming
+        newStatus = 'upcoming';
+      } else {
+        // Current month tournaments are active
+        newStatus = 'active';
+      }
+    }
+
+    console.log('Setting status to:', newStatus);
+
+    // Update status in both arrays
+    tournament.status = newStatus;
+    if (tournamentDetails[tournament.id]) {
+      tournamentDetails[tournament.id].status = newStatus;
+    }
+  });
+
+  res.json(tournaments);
+});
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

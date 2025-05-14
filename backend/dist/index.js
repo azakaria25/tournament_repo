@@ -17,6 +17,8 @@ app.use(express_1.default.json());
 let teams = [];
 let matches = [];
 let tournaments = [];
+// In-memory storage for tournaments and their details
+let tournamentDetails = {};
 // Routes
 app.get('/api/teams', (req, res) => {
     res.json(teams);
@@ -68,12 +70,155 @@ app.delete('/api/teams/:id', (req, res) => {
     matches = [];
     res.status(200).json({ message: 'Team deleted successfully' });
 });
-app.post('/api/tournament/start', (req, res) => {
-    if (teams.length < 2) {
-        return res.status(400).json({ error: 'Need at least 2 teams to start tournament' });
+app.post('/api/tournaments/:id/start', (req, res) => {
+    const tournamentId = req.params.id;
+    const tournament = tournamentDetails[tournamentId];
+    if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
     }
-    // Clear previous matches to regenerate
-    matches = [];
+    if (tournament.teams.length < 2) {
+        return res.status(400).json({ error: 'Need at least 2 teams to start a tournament' });
+    }
+    // Create matches for the tournament
+    const matches = createMatches(tournament.teams);
+    tournament.matches = matches;
+    tournament.status = 'active';
+    // Update tournament status in the tournaments list
+    const tournamentIndex = tournaments.findIndex(t => t.id === tournamentId);
+    if (tournamentIndex !== -1) {
+        tournaments[tournamentIndex].status = 'active';
+    }
+    res.json(tournament);
+});
+app.get('/api/matches', (req, res) => {
+    res.json(matches);
+});
+app.post('/api/matches/:matchId/winner', (req, res) => {
+    const { matchId } = req.params;
+    const { winnerId, tournamentId } = req.body;
+    const tournament = tournamentDetails[tournamentId];
+    if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
+    }
+    const match = tournament.matches.find(m => m.id === matchId);
+    if (!match) {
+        return res.status(404).json({ error: 'Match not found' });
+    }
+    const winner = tournament.teams.find(t => t.id === winnerId);
+    if (!winner) {
+        return res.status(404).json({ error: 'Winner team not found' });
+    }
+    match.winner = winner;
+    // Find the next round match for this winner
+    const currentRound = match.round;
+    const nextRound = currentRound + 1;
+    // Get all matches in the current round
+    const currentRoundMatches = tournament.matches.filter(m => m.round === currentRound);
+    const currentMatchIndex = currentRoundMatches.findIndex(m => m.id === matchId);
+    // Calculate the next match index in the next round
+    const nextMatchIndex = Math.floor(currentMatchIndex / 2);
+    // Get all matches in the next round
+    const nextRoundMatches = tournament.matches.filter(m => m.round === nextRound);
+    const nextMatch = nextRoundMatches[nextMatchIndex];
+    if (nextMatch) {
+        // Determine if winner should be team1 or team2 in next match
+        const isTeam1Slot = currentMatchIndex % 2 === 0;
+        if (isTeam1Slot) {
+            nextMatch.team1 = winner;
+        }
+        else {
+            nextMatch.team2 = winner;
+        }
+    }
+    // Check if tournament is completed
+    const isCompleted = tournament.matches.every(m => m.winner);
+    if (isCompleted) {
+        tournament.status = 'completed';
+        // Update tournament status in the tournaments list
+        const tournamentIndex = tournaments.findIndex(t => t.id === tournamentId);
+        if (tournamentIndex !== -1) {
+            tournaments[tournamentIndex].status = 'completed';
+        }
+    }
+    res.json(tournament.matches);
+});
+app.post('/api/teams/clear', (req, res) => {
+    teams = []; // Clear all teams
+    matches = []; // Clear matches as well since they depend on teams
+    res.json({ message: 'All teams cleared successfully' });
+});
+app.post('/api/matches/clear', (req, res) => {
+    matches = []; // Clear only matches
+    res.json({ message: 'Tournament bracket cleared successfully' });
+});
+// Tournament routes
+app.get('/api/tournaments', (req, res) => {
+    res.json(tournaments);
+});
+app.post('/api/tournaments', (req, res) => {
+    const { name, month, year } = req.body;
+    if (!name || !month || !year) {
+        return res.status(400).json({ error: 'Name, month, and year are required' });
+    }
+    const newTournament = {
+        id: Date.now().toString(),
+        name,
+        month,
+        year,
+        teams: 0,
+        status: 'upcoming'
+    };
+    // Initialize tournament details
+    const tournamentDetail = Object.assign(Object.assign({}, newTournament), { teams: [], matches: [] });
+    tournamentDetails[newTournament.id] = tournamentDetail;
+    tournaments.push(newTournament);
+    res.status(201).json(tournamentDetail);
+});
+app.get('/api/tournaments/:id', (req, res) => {
+    const tournamentId = req.params.id;
+    const details = tournamentDetails[tournamentId];
+    if (!details) {
+        return res.status(404).json({ error: 'Tournament not found' });
+    }
+    res.json(details);
+});
+app.get('/api/tournaments/:id/teams', (req, res) => {
+    const tournamentId = req.params.id;
+    const tournament = tournamentDetails[tournamentId];
+    if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
+    }
+    res.json(tournament.teams);
+});
+app.get('/api/tournaments/:id/matches', (req, res) => {
+    const { id } = req.params;
+    const tournament = tournamentDetails[id];
+    if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
+    }
+    res.json(tournament.matches);
+});
+app.post('/api/tournaments/:id/teams', (req, res) => {
+    const tournamentId = req.params.id;
+    const tournament = tournamentDetails[tournamentId];
+    if (!tournament) {
+        return res.status(404).json({ error: 'Tournament not found' });
+    }
+    const newTeam = {
+        id: Date.now().toString(),
+        name: req.body.name,
+        players: req.body.players
+    };
+    tournament.teams.push(newTeam);
+    // Update the teams count in the tournaments list
+    const tournamentIndex = tournaments.findIndex(t => t.id === tournamentId);
+    if (tournamentIndex !== -1) {
+        tournaments[tournamentIndex].teams = tournament.teams.length;
+    }
+    res.status(201).json(newTeam);
+});
+function createMatches(teams) {
+    const matches = [];
     // Calculate number of rounds needed
     const numTeams = teams.length;
     const numRounds = Math.ceil(Math.log2(numTeams));
@@ -107,90 +252,58 @@ app.post('/api/tournament/start', (req, res) => {
         }
         currentMatchIndex += matchesInRound;
     }
-    res.json(matches);
-});
-app.get('/api/matches', (req, res) => {
-    res.json(matches);
-});
-app.post('/api/matches/:id/winner', (req, res) => {
-    var _a;
-    const { id } = req.params;
-    const { winnerId } = req.body;
-    const match = matches.find(m => m.id === id);
-    if (!match) {
-        return res.status(404).json({ error: 'Match not found' });
-    }
-    const winner = ((_a = match.team1) === null || _a === void 0 ? void 0 : _a.id) === winnerId ? match.team1 : match.team2;
-    if (!winner) {
-        return res.status(400).json({ error: 'Invalid winner' });
-    }
-    match.winner = winner;
-    // Find the next round match for this winner
-    const currentRound = match.round;
-    const nextRound = currentRound + 1;
-    // Get all matches in the current round
-    const currentRoundMatches = matches.filter(m => m.round === currentRound);
-    const currentMatchIndex = currentRoundMatches.findIndex(m => m.id === id);
-    // Calculate the next match index in the next round
-    const nextMatchIndex = Math.floor(currentMatchIndex / 2);
-    // Get all matches in the next round
-    const nextRoundMatches = matches.filter(m => m.round === nextRound);
-    const nextMatch = nextRoundMatches[nextMatchIndex];
-    if (nextMatch) {
-        // Determine if winner should be team1 or team2 in next match
-        const isTeam1Slot = currentMatchIndex % 2 === 0;
-        if (isTeam1Slot) {
-            nextMatch.team1 = winner;
+    return matches;
+}
+app.post('/api/tournaments/update-statuses', (req, res) => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.toLocaleString('default', { month: 'long' }).toLowerCase();
+    const currentYear = currentDate.getFullYear().toString();
+    // Get month index (0-11) for comparison
+    const getMonthIndex = (month) => {
+        const months = ['january', 'february', 'march', 'april', 'may', 'june',
+            'july', 'august', 'september', 'october', 'november', 'december'];
+        return months.indexOf(month.toLowerCase());
+    };
+    const currentMonthIndex = getMonthIndex(currentMonth);
+    console.log('Current month index:', currentMonthIndex, 'Current month:', currentMonth);
+    // Update tournament statuses
+    tournaments.forEach(tournament => {
+        const tournamentMonthIndex = getMonthIndex(tournament.month);
+        const tournamentYear = parseInt(tournament.year);
+        const currentYearNum = parseInt(currentYear);
+        console.log('Tournament:', tournament.name, 'Month index:', tournamentMonthIndex, 'Year:', tournamentYear);
+        let newStatus;
+        if (tournamentYear < currentYearNum) {
+            // Past year tournaments are completed
+            newStatus = 'completed';
+        }
+        else if (tournamentYear > currentYearNum) {
+            // Future year tournaments are upcoming
+            newStatus = 'upcoming';
         }
         else {
-            nextMatch.team2 = winner;
+            // Same year, check month
+            if (tournamentMonthIndex < currentMonthIndex) {
+                // Past month tournaments are completed
+                newStatus = 'completed';
+            }
+            else if (tournamentMonthIndex > currentMonthIndex) {
+                // Future month tournaments are upcoming
+                newStatus = 'upcoming';
+            }
+            else {
+                // Current month tournaments are active
+                newStatus = 'active';
+            }
         }
-    }
-    res.json(matches);
-});
-app.post('/api/teams/clear', (req, res) => {
-    teams = []; // Clear all teams
-    matches = []; // Clear matches as well since they depend on teams
-    res.json({ message: 'All teams cleared successfully' });
-});
-app.post('/api/matches/clear', (req, res) => {
-    matches = []; // Clear only matches
-    res.json({ message: 'Tournament bracket cleared successfully' });
-});
-// Tournament routes
-app.get('/api/tournaments', (req, res) => {
+        console.log('Setting status to:', newStatus);
+        // Update status in both arrays
+        tournament.status = newStatus;
+        if (tournamentDetails[tournament.id]) {
+            tournamentDetails[tournament.id].status = newStatus;
+        }
+    });
     res.json(tournaments);
-});
-app.post('/api/tournaments', (req, res) => {
-    const { name, date } = req.body;
-    if (!name || !date) {
-        return res.status(400).json({ error: 'Name and date are required' });
-    }
-    const newTournament = {
-        id: Date.now().toString(),
-        name,
-        date,
-        teams: 0,
-        status: 'upcoming'
-    };
-    tournaments.push(newTournament);
-    res.status(201).json(newTournament);
-});
-app.get('/api/tournaments/:id/teams', (req, res) => {
-    const { id } = req.params;
-    const tournament = tournaments.find(t => t.id === id);
-    if (!tournament) {
-        return res.status(404).json({ error: 'Tournament not found' });
-    }
-    res.json(teams);
-});
-app.get('/api/tournaments/:id/matches', (req, res) => {
-    const { id } = req.params;
-    const tournament = tournaments.find(t => t.id === id);
-    if (!tournament) {
-        return res.status(404).json({ error: 'Tournament not found' });
-    }
-    res.json(matches);
 });
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
