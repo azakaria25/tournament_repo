@@ -1,5 +1,5 @@
 {
-  "buildCommand": "git submodule update --init --recursive && cd frontend && npm install && npm run build",
+  "buildCommand": "npm install && cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/build",
   "framework": "create-react-app",
   "installCommand": "npm install"
