@@ -18,7 +18,8 @@ export interface Tournament {
   name: string;
   month: string;
   year: string;
-  teams: number;
+  teams: Team[];
+  matches: Match[];
   status: 'active' | 'completed' | 'upcoming';
 }
 

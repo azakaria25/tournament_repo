@@ -5,6 +5,9 @@ import { Team, Match, Tournament } from './types';
 const app = express();
 const port = process.env.PORT || 5000;
 
+// Feature flags
+const USE_IN_MEMORY_STORAGE = false;
+
 // Enable CORS for all routes
 app.use(cors({
   origin: ['https://thiqah-padel-tournament.vercel.app', 'http://localhost:3000'],
@@ -17,6 +20,35 @@ app.use(express.json());
 let teams: Team[] = [];
 let matches: Match[] = [];
 let tournaments: Tournament[] = [];
+let tournamentDetails: { [key: string]: TournamentDetails } = {};
+
+// Storage interface for future database implementation
+interface Storage {
+  teams: Team[];
+  matches: Match[];
+  tournaments: Tournament[];
+  tournamentDetails: { [key: string]: TournamentDetails };
+}
+
+// Initialize storage based on feature flag
+const storage: Storage = USE_IN_MEMORY_STORAGE ? {
+  teams,
+  matches,
+  tournaments,
+  tournamentDetails
+} : {
+  teams: [],
+  matches: [],
+  tournaments: [],
+  tournamentDetails: {}
+};
+
+// Helper functions to access storage
+const getStorage = () => storage;
+const getTeams = () => getStorage().teams;
+const getMatches = () => getStorage().matches;
+const getTournaments = () => getStorage().tournaments;
+const getTournamentDetails = () => getStorage().tournamentDetails;
 
 interface TournamentDetails {
   id: string;
@@ -28,12 +60,9 @@ interface TournamentDetails {
   status: 'active' | 'completed' | 'upcoming';
 }
 
-// In-memory storage for tournaments and their details
-let tournamentDetails: { [key: string]: TournamentDetails } = {};
-
 // Routes
 app.get('/api/teams', (req, res) => {
-  res.json(teams);
+  res.json(getTeams());
 });
 
 app.post('/api/teams', (req, res) => {
@@ -43,7 +72,7 @@ app.post('/api/teams', (req, res) => {
     name,
     players,
   };
-  teams.push(newTeam);
+  getTeams().push(newTeam);
   res.status(201).json(newTeam);
 });
 
@@ -51,54 +80,54 @@ app.put('/api/teams/:id', (req, res) => {
   const { id } = req.params;
   const { name, players } = req.body;
   
-  const teamIndex = teams.findIndex(team => team.id === id);
+  const teamIndex = getTeams().findIndex(team => team.id === id);
   if (teamIndex === -1) {
     return res.status(404).json({ error: 'Team not found' });
   }
 
   // Update team
-  teams[teamIndex] = {
-    ...teams[teamIndex],
+  getTeams()[teamIndex] = {
+    ...getTeams()[teamIndex],
     name,
     players,
   };
 
   // Update team in any existing matches
-  matches.forEach(match => {
+  getMatches().forEach(match => {
     if (match.team1?.id === id) {
-      match.team1 = teams[teamIndex];
+      match.team1 = getTeams()[teamIndex];
     }
     if (match.team2?.id === id) {
-      match.team2 = teams[teamIndex];
+      match.team2 = getTeams()[teamIndex];
     }
     if (match.winner?.id === id) {
-      match.winner = teams[teamIndex];
+      match.winner = getTeams()[teamIndex];
     }
   });
 
-  res.json(teams[teamIndex]);
+  res.json(getTeams()[teamIndex]);
 });
 
 app.delete('/api/teams/:id', (req, res) => {
   const { id } = req.params;
-  const teamIndex = teams.findIndex(team => team.id === id);
+  const teamIndex = getTeams().findIndex(team => team.id === id);
   
   if (teamIndex === -1) {
     return res.status(404).json({ error: 'Team not found' });
   }
   
   // Remove team from teams array
-  teams.splice(teamIndex, 1);
+  getTeams().splice(teamIndex, 1);
   
   // Clear all matches when a team is deleted
-  matches = [];
+  getMatches().length = 0;
   
   res.status(200).json({ message: 'Team deleted successfully' });
 });
 
 app.post('/api/tournaments/:id/start', (req, res) => {
   const tournamentId = req.params.id;
-  const tournament = tournamentDetails[tournamentId];
+  const tournament = getTournamentDetails()[tournamentId];
   
   if (!tournament) {
     return res.status(404).json({ error: 'Tournament not found' });
@@ -113,24 +142,25 @@ app.post('/api/tournaments/:id/start', (req, res) => {
   tournament.matches = matches;
   tournament.status = 'active';
 
-  // Update tournament status in the tournaments list
-  const tournamentIndex = tournaments.findIndex(t => t.id === tournamentId);
+  // Update tournament status and matches in the tournaments list
+  const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
   if (tournamentIndex !== -1) {
-    tournaments[tournamentIndex].status = 'active';
+    getTournaments()[tournamentIndex].status = 'active';
+    getTournaments()[tournamentIndex].matches = matches;
   }
 
   res.json(tournament);
 });
 
 app.get('/api/matches', (req, res) => {
-  res.json(matches);
+  res.json(getMatches());
 });
 
 app.post('/api/matches/:matchId/winner', (req, res) => {
   const { matchId } = req.params;
   const { winnerId, tournamentId } = req.body;
 
-  const tournament = tournamentDetails[tournamentId];
+  const tournament = getTournamentDetails()[tournamentId];
   if (!tournament) {
     return res.status(404).json({ error: 'Tournament not found' });
   }
@@ -177,9 +207,9 @@ app.post('/api/matches/:matchId/winner', (req, res) => {
   if (isCompleted) {
     tournament.status = 'completed';
     // Update tournament status in the tournaments list
-    const tournamentIndex = tournaments.findIndex(t => t.id === tournamentId);
+    const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
     if (tournamentIndex !== -1) {
-      tournaments[tournamentIndex].status = 'completed';
+      getTournaments()[tournamentIndex].status = 'completed';
     }
   }
 
@@ -187,19 +217,25 @@ app.post('/api/matches/:matchId/winner', (req, res) => {
 });
 
 app.post('/api/teams/clear', (req, res) => {
-  teams = []; // Clear all teams
-  matches = []; // Clear matches as well since they depend on teams
+  if (!USE_IN_MEMORY_STORAGE) {
+    return res.status(501).json({ error: 'In-memory storage is disabled' });
+  }
+  getTeams().length = 0; // Clear all teams
+  getMatches().length = 0; // Clear matches as well since they depend on teams
   res.json({ message: 'All teams cleared successfully' });
 });
 
 app.post('/api/matches/clear', (req, res) => {
-  matches = []; // Clear only matches
+  if (!USE_IN_MEMORY_STORAGE) {
+    return res.status(501).json({ error: 'In-memory storage is disabled' });
+  }
+  getMatches().length = 0; // Clear only matches
   res.json({ message: 'Tournament bracket cleared successfully' });
 });
 
 // Tournament routes
 app.get('/api/tournaments', (req, res) => {
-  res.json(tournaments);
+  res.json(getTournaments());
 });
 
 app.post('/api/tournaments', (req, res) => {
@@ -213,7 +249,8 @@ app.post('/api/tournaments', (req, res) => {
     name,
     month,
     year,
-    teams: 0,
+    teams: [],
+    matches: [],
     status: 'upcoming'
   };
 
@@ -223,15 +260,15 @@ app.post('/api/tournaments', (req, res) => {
     teams: [],
     matches: []
   };
-  tournamentDetails[newTournament.id] = tournamentDetail;
+  getTournamentDetails()[newTournament.id] = tournamentDetail;
 
-  tournaments.push(newTournament);
+  getTournaments().push(newTournament);
   res.status(201).json(tournamentDetail);
 });
 
 app.get('/api/tournaments/:id', (req, res) => {
   const tournamentId = req.params.id;
-  const details = tournamentDetails[tournamentId];
+  const details = getTournamentDetails()[tournamentId];
   
   if (!details) {
     return res.status(404).json({ error: 'Tournament not found' });
@@ -242,7 +279,7 @@ app.get('/api/tournaments/:id', (req, res) => {
 
 app.get('/api/tournaments/:id/teams', (req, res) => {
   const tournamentId = req.params.id;
-  const tournament = tournamentDetails[tournamentId];
+  const tournament = getTournamentDetails()[tournamentId];
   
   if (!tournament) {
     return res.status(404).json({ error: 'Tournament not found' });
@@ -253,7 +290,7 @@ app.get('/api/tournaments/:id/teams', (req, res) => {
 
 app.get('/api/tournaments/:id/matches', (req, res) => {
   const { id } = req.params;
-  const tournament = tournamentDetails[id];
+  const tournament = getTournamentDetails()[id];
   
   if (!tournament) {
     return res.status(404).json({ error: 'Tournament not found' });
@@ -263,27 +300,108 @@ app.get('/api/tournaments/:id/matches', (req, res) => {
 });
 
 app.post('/api/tournaments/:id/teams', (req, res) => {
-  const tournamentId = req.params.id;
-  const tournament = tournamentDetails[tournamentId];
-  
-  if (!tournament) {
-    return res.status(404).json({ error: 'Tournament not found' });
+  try {
+    const tournamentId = req.params.id;
+    const tournament = getTournamentDetails()[tournamentId];
+    
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    const { name, players } = req.body;
+    
+    // Check if team name already exists in the tournament
+    const isDuplicateName = tournament.teams.some(team => 
+      team.name.toLowerCase() === name.toLowerCase()
+    );
+    
+    if (isDuplicateName) {
+      return res.status(400).json({ error: 'A team with this name already exists in the tournament' });
+    }
+
+    const newTeam: Team = {
+      id: Date.now().toString(),
+      name,
+      players
+    };
+
+    tournament.teams.push(newTeam);
+    // Update the teams count in the tournaments list
+    const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
+    if (tournamentIndex !== -1) {
+      getTournaments()[tournamentIndex].teams = tournament.teams;
+    }
+
+    res.status(201).json(newTeam);
+  } catch (error) {
+    console.error('Error adding team:', error);
+    res.status(500).json({ error: 'Failed to add team' });
   }
+});
 
-  const newTeam: Team = {
-    id: Date.now().toString(),
-    name: req.body.name,
-    players: req.body.players
-  };
+// Add PUT endpoint for updating tournament team
+app.put('/api/tournaments/:id/teams/:teamId', (req, res) => {
+  try {
+    const tournamentId = req.params.id;
+    const teamId = req.params.teamId;
+    const tournament = getTournamentDetails()[tournamentId];
+    
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
 
-  tournament.teams.push(newTeam);
-  // Update the teams count in the tournaments list
-  const tournamentIndex = tournaments.findIndex(t => t.id === tournamentId);
-  if (tournamentIndex !== -1) {
-    tournaments[tournamentIndex].teams = tournament.teams.length;
+    const teamIndex = tournament.teams.findIndex(team => team.id === teamId);
+    if (teamIndex === -1) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+
+    const { name, players } = req.body;
+    if (!name || !players) {
+      return res.status(400).json({ error: 'Name and players are required' });
+    }
+
+    tournament.teams[teamIndex] = {
+      ...tournament.teams[teamIndex],
+      name,
+      players
+    };
+
+    res.json(tournament.teams[teamIndex]);
+  } catch (error) {
+    console.error('Error updating team:', error);
+    res.status(500).json({ error: 'Failed to update team' });
   }
+});
 
-  res.status(201).json(newTeam);
+// Add DELETE endpoint for tournament team
+app.delete('/api/tournaments/:id/teams/:teamId', (req, res) => {
+  try {
+    const tournamentId = req.params.id;
+    const teamId = req.params.teamId;
+    const tournament = getTournamentDetails()[tournamentId];
+    
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    const teamIndex = tournament.teams.findIndex(team => team.id === teamId);
+    if (teamIndex === -1) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+
+    // Remove team from tournament
+    tournament.teams.splice(teamIndex, 1);
+    // Update the teams count in the tournaments list
+    const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
+    if (tournamentIndex !== -1) {
+      getTournaments()[tournamentIndex].teams = tournament.teams;
+    }
+
+    res.json({ message: 'Team deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting team:', error);
+    res.status(500).json({ error: 'Failed to delete team' });
+  }
 });
 
 function createMatches(teams: Team[]): Match[] {
@@ -345,7 +463,7 @@ app.post('/api/tournaments/update-statuses', (req, res) => {
   console.log('Current month index:', currentMonthIndex, 'Current month:', currentMonth);
 
   // Update tournament statuses
-  tournaments.forEach(tournament => {
+  getTournaments().forEach(tournament => {
     const tournamentMonthIndex = getMonthIndex(tournament.month);
     const tournamentYear = parseInt(tournament.year);
     const currentYearNum = parseInt(currentYear);
@@ -378,12 +496,91 @@ app.post('/api/tournaments/update-statuses', (req, res) => {
 
     // Update status in both arrays
     tournament.status = newStatus;
-    if (tournamentDetails[tournament.id]) {
-      tournamentDetails[tournament.id].status = newStatus;
+    if (getTournamentDetails()[tournament.id]) {
+      getTournamentDetails()[tournament.id].status = newStatus;
     }
   });
 
-  res.json(tournaments);
+  res.json(getTournaments());
+});
+
+// Add PUT endpoint for updating tournament
+app.put('/api/tournaments/:id', (req, res) => {
+  const tournamentId = req.params.id;
+  const { name, month, year } = req.body;
+
+  if (!name || !month || !year) {
+    return res.status(400).json({ error: 'Name, month, and year are required' });
+  }
+
+  const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
+  if (tournamentIndex === -1) {
+    return res.status(404).json({ error: 'Tournament not found' });
+  }
+
+  const tournament = getTournamentDetails()[tournamentId];
+  if (!tournament) {
+    return res.status(404).json({ error: 'Tournament details not found' });
+  }
+
+  // Update tournament in both arrays
+  getTournaments()[tournamentIndex] = {
+    ...getTournaments()[tournamentIndex],
+    name,
+    month,
+    year
+  };
+
+  getTournamentDetails()[tournamentId] = {
+    ...tournament,
+    name,
+    month,
+    year
+  };
+
+  res.json(getTournamentDetails()[tournamentId]);
+});
+
+// Add DELETE endpoint for deleting tournament
+app.delete('/api/tournaments/:id', (req, res) => {
+  const tournamentId = req.params.id;
+
+  const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
+  if (tournamentIndex === -1) {
+    return res.status(404).json({ error: 'Tournament not found' });
+  }
+
+  // Remove tournament from both arrays
+  getTournaments().splice(tournamentIndex, 1);
+  delete getTournamentDetails()[tournamentId];
+
+  res.json({ message: 'Tournament deleted successfully' });
+});
+
+// Add endpoint to delete all tournaments
+app.delete('/api/tournaments', (req, res) => {
+  if (!USE_IN_MEMORY_STORAGE) {
+    return res.status(501).json({ error: 'In-memory storage is disabled' });
+  }
+  
+  // Clear all tournaments and their details
+  getTournaments().length = 0;
+  Object.keys(getTournamentDetails()).forEach(key => {
+    delete getTournamentDetails()[key];
+  });
+  
+  res.json({ message: 'All tournaments deleted successfully' });
+});
+
+// Error handling middleware
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Handle 404 errors
+app.use((req: express.Request, res: express.Response) => {
+  res.status(404).json({ error: 'Not found' });
 });
 
 app.listen(port, () => {
