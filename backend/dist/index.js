@@ -102,10 +102,11 @@ app.post('/api/tournaments/:id/start', (req, res) => {
     const matches = createMatches(tournament.teams);
     tournament.matches = matches;
     tournament.status = 'active';
-    // Update tournament status in the tournaments list
+    // Update tournament status and matches in the tournaments list
     const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
     if (tournamentIndex !== -1) {
         getTournaments()[tournamentIndex].status = 'active';
+        getTournaments()[tournamentIndex].matches = matches;
     }
     res.json(tournament);
 });
@@ -190,7 +191,8 @@ app.post('/api/tournaments', (req, res) => {
         name,
         month,
         year,
-        teams: 0,
+        teams: [],
+        matches: [],
         status: 'upcoming'
     };
     // Initialize tournament details
@@ -245,7 +247,7 @@ app.post('/api/tournaments/:id/teams', (req, res) => {
         // Update the teams count in the tournaments list
         const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
         if (tournamentIndex !== -1) {
-            getTournaments()[tournamentIndex].teams = tournament.teams.length;
+            getTournaments()[tournamentIndex].teams = tournament.teams;
         }
         res.status(201).json(newTeam);
     }
@@ -298,7 +300,7 @@ app.delete('/api/tournaments/:id/teams/:teamId', (req, res) => {
         // Update the teams count in the tournaments list
         const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
         if (tournamentIndex !== -1) {
-            getTournaments()[tournamentIndex].teams = tournament.teams.length;
+            getTournaments()[tournamentIndex].teams = tournament.teams;
         }
         res.json({ message: 'Team deleted successfully' });
     }
@@ -433,15 +435,18 @@ app.delete('/api/tournaments/:id', (req, res) => {
 });
 // Add endpoint to delete all tournaments
 app.delete('/api/tournaments', (req, res) => {
-    if (!USE_IN_MEMORY_STORAGE) {
-        return res.status(501).json({ error: 'In-memory storage is disabled' });
+    try {
+        // Clear all tournaments and their details
+        getTournaments().length = 0;
+        Object.keys(getTournamentDetails()).forEach(key => {
+            delete getTournamentDetails()[key];
+        });
+        res.json({ message: 'All tournaments deleted successfully' });
     }
-    // Clear all tournaments and their details
-    getTournaments().length = 0;
-    Object.keys(getTournamentDetails()).forEach(key => {
-        delete getTournamentDetails()[key];
-    });
-    res.json({ message: 'All tournaments deleted successfully' });
+    catch (error) {
+        console.error('Error deleting all tournaments:', error);
+        res.status(500).json({ error: 'Failed to delete all tournaments' });
+    }
 });
 // Error handling middleware
 app.use((err, req, res, next) => {
