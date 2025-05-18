@@ -1,8 +1,19 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm install && npm run build",
+  "buildCommand": "npm install && cd frontend && npm install && CI=false npm run build",
   "outputDirectory": "frontend/build",
   "framework": "create-react-app",
+  "installCommand": "npm install",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build",
+        "buildCommand": "CI=false npm run build"
+      }
+    }
+  ],
   "routes": [
     {
       "src": "/static/(.*)",
