@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install && cd frontend && npm install && npm run build",
+  "buildCommand": "npm run install:all && cd frontend && npm run build",
   "outputDirectory": "frontend/build",
   "framework": "create-react-app",
   "installCommand": "npm install"
