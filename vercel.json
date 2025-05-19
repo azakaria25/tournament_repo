@@ -4,43 +4,44 @@
   "outputDirectory": "frontend/build",
   "framework": "create-react-app",
   "env": {
-    "REACT_APP_API_URL": "https://your-api-domain.vercel.app",
-    "NODE_ENV": "production"
+    "REACT_APP_API_URL": "https://padel-tournament-backend.vercel.app",
+    "NODE_ENV": "production",
+    "MONGODB_URI": "@mongodb_uri",
+    "JWT_SECRET": "@jwt_secret",
+    "CORS_ORIGIN": "https://padel-tournament.vercel.app"
   },
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://your-api-domain.vercel.app/api/:path*"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
+      "destination": "https://padel-tournament-backend.vercel.app/api/:path*"
     },
     {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
+      "source": "/static/(.*)",
+      "destination": "/static/$1"
     },
     {
-      "src": "/favicon.ico",
-      "dest": "/favicon.ico"
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
     },
     {
-      "src": "/manifest.json",
-      "dest": "/manifest.json"
+      "source": "/favicon.ico",
+      "destination": "/favicon.ico"
     },
     {
-      "src": "/logo192.png",
-      "dest": "/logo192.png"
+      "source": "/manifest.json",
+      "destination": "/manifest.json"
     },
     {
-      "src": "/logo512.png",
-      "dest": "/logo512.png"
+      "source": "/logo192.png",
+      "destination": "/logo192.png"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/logo512.png",
+      "destination": "/logo512.png"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 } 
