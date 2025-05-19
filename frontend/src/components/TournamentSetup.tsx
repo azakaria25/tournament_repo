@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import './TournamentSetup.css';
-import { Link } from 'react-router-dom';
 
 interface TournamentSetupProps {
   onSubmit: (name: string, month: string, year: string) => void;
