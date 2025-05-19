@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './TournamentManagement.css';
 
 interface Team {
@@ -25,15 +25,6 @@ interface Tournament {
   status: 'active' | 'completed' | 'upcoming';
 }
 
-interface TournamentDetails {
-  id: string;
-  name: string;
-  month: string;
-  teams: Team[];
-  matches: Match[];
-  status: 'active' | 'completed' | 'upcoming';
-}
-
 interface TournamentManagementProps {
   tournament: Tournament;
   onBack: () => void;
@@ -46,11 +37,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [isTeamSectionVisible, setIsTeamSectionVisible] = useState(true);
 
-  useEffect(() => {
-    fetchTournamentDetails();
-  }, [tournament.id]);
-
-  const fetchTournamentDetails = async () => {
+  const fetchTournamentDetails = useCallback(async () => {
     try {
       const [teamsResponse, matchesResponse] = await Promise.all([
         fetch(`http://localhost:5000/api/tournaments/${tournament.id}/teams`),
@@ -71,7 +58,11 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
       console.error('Error fetching tournament details:', error);
       alert('Failed to fetch tournament details. Please try again.');
     }
-  };
+  }, [tournament.id]);
+
+  useEffect(() => {
+    fetchTournamentDetails();
+  }, [fetchTournamentDetails]);
 
   const handleAddTeam = async (e: React.FormEvent) => {
     e.preventDefault();
