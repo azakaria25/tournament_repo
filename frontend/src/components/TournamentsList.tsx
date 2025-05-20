@@ -160,7 +160,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     if (window.confirm('Are you sure you want to delete this tournament?')) {
       try {
         setIsDeletingTournament(tournamentId);
-        const response = await fetch(`http://localhost:3001/api/tournaments/${tournamentId}`, {
+        const response = await fetch(`$(API_URL)/api/tournaments/${tournamentId}`, {
           method: 'DELETE',
         });
 
@@ -186,7 +186,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
 
     try {
       setIsUpdatingTournament(editingTournament.id);
-      const response = await fetch(`http://localhost:3001/api/tournaments/${editingTournament.id}`, {
+      const response = await fetch(`$(API_URL)/api/tournaments/${editingTournament.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -222,7 +222,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     if (window.confirm('Are you sure you want to delete ALL tournaments? This action cannot be undone.')) {
       try {
         setIsDeletingAll(true);
-        const response = await fetch('http://localhost:3001/api/tournaments', {
+        const response = await fetch('$(API_URL)/api/tournaments', {
           method: 'DELETE',
         });
 

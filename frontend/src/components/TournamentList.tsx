@@ -8,6 +8,8 @@ interface Tournament {
   month: string;
 }
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const TournamentList: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,7 +20,7 @@ const TournamentList: React.FC = () => {
   const fetchTournaments = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:3001/api/tournaments');
+      const response = await fetch(`${API_URL}/api/tournaments`);
       if (!response.ok) {
         throw new Error('Failed to fetch tournaments');
       }
@@ -39,7 +41,7 @@ const TournamentList: React.FC = () => {
   const handleCreateTournament = async (tournamentData: { name: string; month: string }) => {
     try {
       setIsSubmitting(true);
-      const response = await fetch('http://localhost:3001/api/tournaments', {
+      const response = await fetch(`${API_URL}/api/tournaments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +69,7 @@ const TournamentList: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      const response = await fetch(`http://localhost:3001/api/tournaments/${editingTournament.id}`, {
+      const response = await fetch(`${API_URL}/api/tournaments/${editingTournament.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +102,7 @@ const TournamentList: React.FC = () => {
 
     try {
       setIsSubmitting(true);
-      const response = await fetch(`http://localhost:3001/api/tournaments/${id}`, {
+      const response = await fetch(`${API_URL}/api/tournaments/${id}`, {
         method: 'DELETE',
       });
 

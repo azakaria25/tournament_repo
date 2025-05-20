@@ -17,10 +17,10 @@ if (!process.env.DATABASE_URL) {
 }
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 5000;
 
 // Feature flags
-const USE_IN_MEMORY_STORAGE = false;
+const USE_IN_MEMORY_STORAGE = process.env.USE_IN_MEMORY_STORAGE === 'true';
 
 // Initialize database service
 const databaseService = new DatabaseService();

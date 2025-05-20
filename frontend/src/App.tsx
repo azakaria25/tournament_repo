@@ -5,7 +5,7 @@ import TournamentSetup from './components/TournamentSetup';
 import TournamentsList from './components/TournamentsList';
 import TournamentManagement from './components/TournamentManagement';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 interface Team {
   id: string;

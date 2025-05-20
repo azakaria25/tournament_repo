@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './TournamentManagement.css';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 interface Team {
   id: string;
