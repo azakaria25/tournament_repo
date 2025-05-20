@@ -117,7 +117,8 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
         throw new Error(errorData.error || 'Failed to register team to tournament');
       }
 
-      await fetchTournamentDetails();
+      // Update teams state directly instead of reloading all teams
+      setTeams(prevTeams => [...prevTeams, createdTeam]);
       setNewTeam({ name: '', players: ['', ''] });
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to add team. Please try again.');
@@ -208,7 +209,19 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
         throw new Error(errorData.error || 'Failed to delete team');
       }
 
-      await fetchTournamentDetails();
+      // Update teams state directly instead of reloading all teams
+      setTeams(prevTeams => prevTeams.filter(team => team.id !== teamId));
+      
+      // If there are matches, we need to update them as well
+      if (matches.length > 0) {
+        const updatedMatches = matches.map(match => ({
+          ...match,
+          team1: match.team1?.id === teamId ? null : match.team1,
+          team2: match.team2?.id === teamId ? null : match.team2,
+          winner: match.winner?.id === teamId ? null : match.winner
+        }));
+        setMatches(updatedMatches);
+      }
     } catch (error) {
       console.error('Error deleting team:', error);
       alert(error instanceof Error ? error.message : 'Failed to delete team. Please try again.');
@@ -239,7 +252,12 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
         throw new Error(errorData.error || 'Failed to update team');
       }
 
-      await fetchTournamentDetails();
+      const updatedTeam = await response.json();
+      
+      // Update teams state directly instead of reloading all teams
+      setTeams(prevTeams => prevTeams.map(team => 
+        team.id === updatedTeam.id ? updatedTeam : team
+      ));
       setEditingTeam(null);
     } catch (error) {
       console.error('Error updating team:', error);

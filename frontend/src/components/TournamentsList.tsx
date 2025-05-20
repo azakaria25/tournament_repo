@@ -30,7 +30,7 @@ interface Tournament {
 interface TournamentsListProps {
   tournaments: Tournament[];
   onCreateNew: () => void;
-  onTournamentUpdate: () => void;
+  onTournamentUpdate: (updatedTournaments?: Tournament[]) => void;
 }
 
 const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreateNew, onTournamentUpdate }) => {
@@ -168,7 +168,9 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
           throw new Error('Failed to delete tournament');
         }
 
-        onTournamentUpdate(); // Refresh the tournaments list
+        // Update tournaments state directly instead of reloading all tournaments
+        const updatedTournaments = tournaments.filter(t => t.id !== tournamentId);
+        onTournamentUpdate(updatedTournaments);
       } catch (error) {
         console.error('Error deleting tournament:', error);
         alert('Failed to delete tournament. Please try again.');
@@ -196,8 +198,14 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
         throw new Error('Failed to update tournament');
       }
 
+      const updatedTournament = await response.json();
+      
+      // Update tournaments state directly instead of reloading all tournaments
+      const updatedTournaments = tournaments.map(t => 
+        t.id === updatedTournament.id ? updatedTournament : t
+      );
+      onTournamentUpdate(updatedTournaments);
       setEditingTournament(null);
-      onTournamentUpdate(); // Refresh the tournaments list
     } catch (error) {
       console.error('Error updating tournament:', error);
       alert('Failed to update tournament. Please try again.');

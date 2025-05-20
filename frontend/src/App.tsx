@@ -79,6 +79,14 @@ function App() {
     }
   };
 
+  const handleTournamentUpdate = (updatedTournaments?: Tournament[]) => {
+    if (updatedTournaments) {
+      setTournaments(updatedTournaments);
+    } else {
+      fetchTournaments();
+    }
+  };
+
   const handleTournamentSetup = async (name: string, month: string, year: string) => {
     try {
       setIsCreatingTournament(true);
@@ -113,11 +121,11 @@ function App() {
       }
 
       const updatedTournaments = await statusResponse.json();
-      setTournaments(updatedTournaments);
+      handleTournamentUpdate(updatedTournaments);
       setShowSetup(false);
     } catch (error) {
       console.error('Error creating tournament:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create tournament. Please try again.');
+      alert(error instanceof Error ? error.message : 'Failed to create tournament');
     } finally {
       setIsCreatingTournament(false);
     }
@@ -147,27 +155,29 @@ function App() {
                 </div>
               ) : (
                 <>
-                  <TournamentsList 
-                    tournaments={tournaments} 
-                    onCreateNew={() => setShowSetup(true)}
-                    onTournamentUpdate={fetchTournaments}
-                  />
-                  {showSetup && (
-                    <div className="modal-overlay">
-                      <div className="modal-content">
-                        <TournamentSetup
-                          onSubmit={handleTournamentSetup}
-                          onBack={() => setShowSetup(false)}
-                          isSubmitting={isCreatingTournament}
-                        />
-                      </div>
-                    </div>
+                  {showSetup ? (
+                    <TournamentSetup
+                      onSubmit={handleTournamentSetup}
+                      onBack={() => setShowSetup(false)}
+                      isSubmitting={isCreatingTournament}
+                    />
+                  ) : (
+                    <TournamentsList
+                      tournaments={tournaments}
+                      onCreateNew={() => setShowSetup(true)}
+                      onTournamentUpdate={handleTournamentUpdate}
+                    />
                   )}
                 </>
               )}
             </div>
           } />
-          <Route path="/tournament/:id" element={<TournamentManagementWrapper tournaments={tournaments} setTournaments={setTournaments} />} />
+          <Route path="/tournament/:id" element={
+            <TournamentManagementWrapper 
+              tournaments={tournaments} 
+              setTournaments={setTournaments} 
+            />
+          } />
         </Routes>
       </main>
 
