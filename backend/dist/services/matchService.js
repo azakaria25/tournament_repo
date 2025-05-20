@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.advanceWinner = exports.createMatches = void 0;
-const createMatches = (teams) => {
+const createMatches = (teams, tournamentId) => {
     const matches = [];
     let round = 1;
     let currentTeams = [...teams];
@@ -15,6 +15,7 @@ const createMatches = (teams) => {
             const team2 = currentTeams[i * 2 + 1];
             roundMatches.push({
                 id: `match-${round}-${i}`,
+                tournamentId,
                 round,
                 matchIndex: i,
                 team1: team1 || null,

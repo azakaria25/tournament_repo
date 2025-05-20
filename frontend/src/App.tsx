@@ -5,7 +5,7 @@ import TournamentSetup from './components/TournamentSetup';
 import TournamentsList from './components/TournamentsList';
 import TournamentManagement from './components/TournamentManagement';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 interface Team {
   id: string;
@@ -35,6 +35,8 @@ interface Tournament {
 function App() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [showSetup, setShowSetup] = useState(false);
+  const [isCreatingTournament, setIsCreatingTournament] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchTournaments();
@@ -43,6 +45,7 @@ function App() {
 
   const fetchTournaments = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch(`${API_URL}/api/tournaments`);
       if (!response.ok) {
         throw new Error('Failed to fetch tournaments');
@@ -51,6 +54,8 @@ function App() {
       setTournaments(data);
     } catch (error) {
       console.error('Error fetching tournaments:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -76,6 +81,7 @@ function App() {
 
   const handleTournamentSetup = async (name: string, month: string, year: string) => {
     try {
+      setIsCreatingTournament(true);
       console.log('Creating tournament with:', { name, month, year });
       const response = await fetch(`${API_URL}/api/tournaments`, {
         method: 'POST',
@@ -112,6 +118,8 @@ function App() {
     } catch (error) {
       console.error('Error creating tournament:', error);
       alert(error instanceof Error ? error.message : 'Failed to create tournament. Please try again.');
+    } finally {
+      setIsCreatingTournament(false);
     }
   };
 
@@ -132,17 +140,30 @@ function App() {
         <Routes>
           <Route path="/" element={
             <div className="container">
-              <TournamentsList 
-                tournaments={tournaments} 
-                onCreateNew={() => setShowSetup(true)}
-                onTournamentUpdate={fetchTournaments}
-              />
-              {showSetup && (
-                <div className="modal-overlay">
-                  <div className="modal-content">
-                    <TournamentSetup onSubmit={handleTournamentSetup} onBack={() => setShowSetup(false)} />
-                  </div>
+              {isLoading ? (
+                <div className="page-loading">
+                  <div className="loading-spinner" style={{ width: '50px', height: '50px' }} />
+                  <p>Loading tournaments...</p>
                 </div>
+              ) : (
+                <>
+                  <TournamentsList 
+                    tournaments={tournaments} 
+                    onCreateNew={() => setShowSetup(true)}
+                    onTournamentUpdate={fetchTournaments}
+                  />
+                  {showSetup && (
+                    <div className="modal-overlay">
+                      <div className="modal-content">
+                        <TournamentSetup
+                          onSubmit={handleTournamentSetup}
+                          onBack={() => setShowSetup(false)}
+                          isSubmitting={isCreatingTournament}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           } />

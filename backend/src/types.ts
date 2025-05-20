@@ -11,6 +11,7 @@ export interface Match {
   team2: Team | null;
   winner: Team | null;
   matchIndex: number;
+  tournamentId: string;
 }
 
 export interface Tournament {

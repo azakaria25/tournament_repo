@@ -39,6 +39,10 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
   const [collapsedMonths, setCollapsedMonths] = useState<{ [key: string]: boolean }>({});
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
   const [editForm, setEditForm] = useState({ name: '', month: '', year: '' });
+  const [isDeletingTournament, setIsDeletingTournament] = useState<string | null>(null);
+  const [isUpdatingTournament, setIsUpdatingTournament] = useState<string | null>(null);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Initialize collapsed state based on current date
   useEffect(() => {
@@ -66,6 +70,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     }, {} as { [key: string]: boolean });
 
     setCollapsedMonths(initialCollapsedMonths);
+    setIsLoading(false);
   }, [tournaments]);
 
   const toggleYear = (year: string) => {
@@ -154,7 +159,8 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this tournament?')) {
       try {
-        const response = await fetch(`http://localhost:5000/api/tournaments/${tournamentId}`, {
+        setIsDeletingTournament(tournamentId);
+        const response = await fetch(`http://localhost:3001/api/tournaments/${tournamentId}`, {
           method: 'DELETE',
         });
 
@@ -166,6 +172,8 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
       } catch (error) {
         console.error('Error deleting tournament:', error);
         alert('Failed to delete tournament. Please try again.');
+      } finally {
+        setIsDeletingTournament(null);
       }
     }
   };
@@ -175,7 +183,8 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     if (!editingTournament) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/tournaments/${editingTournament.id}`, {
+      setIsUpdatingTournament(editingTournament.id);
+      const response = await fetch(`http://localhost:3001/api/tournaments/${editingTournament.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -192,6 +201,8 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     } catch (error) {
       console.error('Error updating tournament:', error);
       alert('Failed to update tournament. Please try again.');
+    } finally {
+      setIsUpdatingTournament(null);
     }
   };
 
@@ -202,7 +213,8 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
   const handleDeleteAllTournaments = async () => {
     if (window.confirm('Are you sure you want to delete ALL tournaments? This action cannot be undone.')) {
       try {
-        const response = await fetch('http://localhost:5000/api/tournaments', {
+        setIsDeletingAll(true);
+        const response = await fetch('http://localhost:3001/api/tournaments', {
           method: 'DELETE',
         });
 
@@ -214,6 +226,8 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
       } catch (error) {
         console.error('Error deleting all tournaments:', error);
         alert('Failed to delete all tournaments. Please try again.');
+      } finally {
+        setIsDeletingAll(false);
       }
     }
   };
@@ -226,17 +240,33 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
           <p className="tournaments-subtitle">Manage and track your tournaments</p>
         </div>
         <div className="header-actions">
-          <button onClick={handleDeleteAllTournaments} className="delete-all-button">
-            Delete All Tournaments
+          <button 
+            onClick={handleDeleteAllTournaments} 
+            className="delete-all-button"
+            disabled={isDeletingAll || isLoading}
+          >
+            {isDeletingAll ? (
+              <>
+                <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
+                Deleting...
+              </>
+            ) : (
+              'Delete All Tournaments'
+            )}
           </button>
-          <button onClick={onCreateNew} className="create-tournament-button">
+          <button onClick={onCreateNew} className="create-tournament-button" disabled={isLoading}>
             <span className="button-icon">+</span>
             Create New Tournament
           </button>
         </div>
       </div>
 
-      {!tournaments || tournaments.length === 0 ? (
+      {isLoading ? (
+        <div className="loading-tournaments">
+          <div className="loading-spinner" style={{ width: '40px', height: '40px' }} />
+          <p>Loading tournaments...</p>
+        </div>
+      ) : !tournaments || tournaments.length === 0 ? (
         <div className="no-tournaments">
           <div className="empty-state-icon">🏆</div>
           <p>No tournaments found. Create your first tournament!</p>
@@ -297,11 +327,13 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
                                     onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
                                     placeholder="Tournament Name"
                                     required
+                                    disabled={isUpdatingTournament === tournament.id}
                                   />
                                   <select
                                     value={editForm.month}
                                     onChange={e => setEditForm(prev => ({ ...prev, month: e.target.value }))}
                                     required
+                                    disabled={isUpdatingTournament === tournament.id}
                                   >
                                     {months.map(m => (
                                       <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>
@@ -315,10 +347,22 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
                                     required
                                     min="2000"
                                     max="2100"
+                                    disabled={isUpdatingTournament === tournament.id}
                                   />
                                   <div className="edit-actions">
-                                    <button type="submit" className="save-button">Save</button>
-                                    <button type="button" onClick={handleEditCancel} className="cancel-button">Cancel</button>
+                                    <button type="submit" className="save-button" disabled={isUpdatingTournament === tournament.id}>
+                                      {isUpdatingTournament === tournament.id ? (
+                                        <>
+                                          <div className="loading-spinner" style={{ width: '20px', height: '20px', marginRight: '8px' }} />
+                                          Saving...
+                                        </>
+                                      ) : (
+                                        'Save'
+                                      )}
+                                    </button>
+                                    <button type="button" onClick={handleEditCancel} className="cancel-button" disabled={isUpdatingTournament === tournament.id}>
+                                      Cancel
+                                    </button>
                                   </div>
                                 </form>
                               ) : (
@@ -349,15 +393,25 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
                                       className="edit-button"
                                       onClick={(e) => handleEditClick(e, tournament)}
                                       title="Edit Tournament"
+                                      disabled={isUpdatingTournament === tournament.id || isDeletingTournament === tournament.id}
                                     >
-                                      ✎
+                                      {isUpdatingTournament === tournament.id ? (
+                                        <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
+                                      ) : (
+                                        '✎'
+                                      )}
                                     </button>
                                     <button
                                       className="delete-button"
                                       onClick={(e) => handleDeleteClick(e, tournament.id)}
                                       title="Delete Tournament"
+                                      disabled={isUpdatingTournament === tournament.id || isDeletingTournament === tournament.id}
                                     >
-                                      ×
+                                      {isDeletingTournament === tournament.id ? (
+                                        <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
+                                      ) : (
+                                        '×'
+                                      )}
                                     </button>
                                   </div>
                                 </>

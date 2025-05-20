@@ -4,6 +4,7 @@ import './TournamentSetup.css';
 interface TournamentSetupProps {
   onSubmit: (name: string, month: string, year: string) => void;
   onBack: () => void;
+  isSubmitting?: boolean;
 }
 
 const MONTHS = [
@@ -21,7 +22,7 @@ const MONTHS = [
   { value: 'december', label: 'December' }
 ];
 
-const TournamentSetup: React.FC<TournamentSetupProps> = ({ onSubmit, onBack }) => {
+const TournamentSetup: React.FC<TournamentSetupProps> = ({ onSubmit, onBack, isSubmitting = false }) => {
   const currentDate = new Date();
   const currentMonth = currentDate.toLocaleString('default', { month: 'long' }).toLowerCase();
   const currentYear = currentDate.getFullYear();
@@ -95,8 +96,15 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({ onSubmit, onBack }) =
         </div>
 
         <div className="form-actions">
-          <button type="submit" className="submit-button">
-            Create Tournament
+          <button type="submit" className="submit-button" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <div className="loading-spinner" style={{ width: '20px', height: '20px', marginRight: '8px' }} />
+                Creating Tournament...
+              </>
+            ) : (
+              'Create Tournament'
+            )}
           </button>
         </div>
       </form>

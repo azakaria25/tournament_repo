@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './TournamentManagement.css';
 
+const API_URL = 'http://localhost:3001';
+
 interface Team {
   id: string;
   name: string;
@@ -36,12 +38,19 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   const [newTeam, setNewTeam] = useState({ name: '', players: ['', ''] });
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [isTeamSectionVisible, setIsTeamSectionVisible] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAddingTeam, setIsAddingTeam] = useState(false);
+  const [isUpdatingTeam, setIsUpdatingTeam] = useState(false);
+  const [isDeletingTeam, setIsDeletingTeam] = useState<string | null>(null);
+  const [isStartingTournament, setIsStartingTournament] = useState(false);
+  const [isUpdatingWinner, setIsUpdatingWinner] = useState<string | null>(null);
 
   const fetchTournamentDetails = useCallback(async () => {
+    setIsLoading(true);
     try {
       const [teamsResponse, matchesResponse] = await Promise.all([
-        fetch(`http://localhost:5000/api/tournaments/${tournament.id}/teams`),
-        fetch(`http://localhost:5000/api/tournaments/${tournament.id}/matches`)
+        fetch(`${API_URL}/api/tournaments/${tournament.id}/teams`),
+        fetch(`${API_URL}/api/tournaments/${tournament.id}/matches`)
       ]);
 
       if (!teamsResponse.ok || !matchesResponse.ok) {
@@ -57,6 +66,8 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
     } catch (error) {
       console.error('Error fetching tournament details:', error);
       alert('Failed to fetch tournament details. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   }, [tournament.id]);
 
@@ -66,15 +77,14 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
 
   const handleAddTeam = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Validate team name
     if (!newTeam.name.trim()) {
       alert('Please enter a team name');
       return;
     }
-    // Filter out empty player names
+    setIsAddingTeam(true);
     const validPlayers = newTeam.players.filter(player => player.trim() !== '');
     try {
-      const response = await fetch(`http://localhost:5000/api/tournaments/${tournament.id}/teams`, {
+      const createTeamResponse = await fetch(`${API_URL}/api/teams`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,26 +94,35 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
           players: validPlayers
         }),
       });
-      let errorMessage = 'Failed to add team';
-      let data = null;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        // If parsing fails, fallback to status text
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status} ${response.statusText}`);
-        }
-        throw parseError;
+
+      if (!createTeamResponse.ok) {
+        const errorData = await createTeamResponse.json();
+        throw new Error(errorData.error || 'Failed to create team');
       }
-      if (!response.ok) {
-        errorMessage = (data && data.error) ? data.error : errorMessage;
-        throw new Error(errorMessage);
+
+      const createdTeam = await createTeamResponse.json();
+
+      const registerTeamResponse = await fetch(`${API_URL}/api/tournaments/${tournament.id}/teams`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamId: createdTeam.id
+        }),
+      });
+
+      if (!registerTeamResponse.ok) {
+        const errorData = await registerTeamResponse.json();
+        throw new Error(errorData.error || 'Failed to register team to tournament');
       }
-      setTeams([...teams, data]);
+
+      await fetchTournamentDetails();
       setNewTeam({ name: '', players: ['', ''] });
     } catch (error) {
-      // Always show backend error if available
       alert(error instanceof Error ? error.message : 'Failed to add team. Please try again.');
+    } finally {
+      setIsAddingTeam(false);
     }
   };
 
@@ -113,8 +132,9 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
       return;
     }
 
+    setIsStartingTournament(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/tournaments/${tournament.id}/start`, {
+      const response = await fetch(`${API_URL}/api/tournaments/${tournament.id}/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,12 +152,15 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
     } catch (error) {
       console.error('Error starting tournament:', error);
       alert(error instanceof Error ? error.message : 'Failed to start tournament. Please try again.');
+    } finally {
+      setIsStartingTournament(false);
     }
   };
 
   const setWinner = async (matchId: string, winnerId: string) => {
+    setIsUpdatingWinner(matchId);
     try {
-      const response = await fetch(`http://localhost:5000/api/matches/${matchId}/winner`, {
+      const response = await fetch(`${API_URL}/api/matches/${matchId}/winner`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,6 +177,8 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
     } catch (error) {
       console.error('Error updating match winner:', error);
       alert('Failed to update match winner. Please try again.');
+    } finally {
+      setIsUpdatingWinner(null);
     }
   };
 
@@ -162,9 +187,10 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
       return;
     }
 
+    setIsDeletingTeam(teamId);
     try {
       console.log('Deleting team:', { tournamentId: tournament.id, teamId });
-      const response = await fetch(`http://localhost:5000/api/tournaments/${tournament.id}/teams/${teamId}`, {
+      const response = await fetch(`${API_URL}/api/tournaments/${tournament.id}/teams/${teamId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -177,11 +203,12 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
         throw new Error(errorData.error || 'Failed to delete team');
       }
 
-      // Refresh the teams list after successful deletion
       await fetchTournamentDetails();
     } catch (error) {
       console.error('Error deleting team:', error);
       alert(error instanceof Error ? error.message : 'Failed to delete team. Please try again.');
+    } finally {
+      setIsDeletingTeam(null);
     }
   };
 
@@ -189,8 +216,9 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
     e.preventDefault();
     if (!editingTeam) return;
 
+    setIsUpdatingTeam(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/tournaments/${tournament.id}/teams/${editingTeam.id}`, {
+      const response = await fetch(`${API_URL}/api/teams/${editingTeam.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -206,12 +234,13 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
         throw new Error(errorData.error || 'Failed to update team');
       }
 
-      // Refresh the teams list after successful update
-      fetchTournamentDetails();
+      await fetchTournamentDetails();
       setEditingTeam(null);
     } catch (error) {
       console.error('Error updating team:', error);
       alert(error instanceof Error ? error.message : 'Failed to update team. Please try again.');
+    } finally {
+      setIsUpdatingTeam(false);
     }
   };
 
@@ -248,20 +277,30 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
             {roundMatches.map(match => {
               const isTeam1Winner = match.winner?.id === match.team1?.id;
               const isTeam2Winner = match.winner?.id === match.team2?.id;
+              const isUpdatingTeam1 = isUpdatingWinner === match.id && isTeam1Winner;
+              const isUpdatingTeam2 = isUpdatingWinner === match.id && isTeam2Winner;
 
               return (
                 <div key={match.id} className="match">
                   <div 
-                    className={`team ${isTeam1Winner ? 'winner' : ''}`}
-                    onClick={() => match.team1 && setWinner(match.id, match.team1.id)}
+                    className={`team ${isTeam1Winner ? 'winner' : ''} ${isUpdatingTeam1 ? 'updating' : ''}`}
+                    onClick={() => match.team1 && !isUpdatingWinner && setWinner(match.id, match.team1.id)}
                   >
-                    {match.team1 ? match.team1.name : 'TBD'}
+                    {isUpdatingTeam1 ? (
+                      <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
+                    ) : (
+                      match.team1 ? match.team1.name : 'TBD'
+                    )}
                   </div>
                   <div 
-                    className={`team ${isTeam2Winner ? 'winner' : ''}`}
-                    onClick={() => match.team2 && setWinner(match.id, match.team2.id)}
+                    className={`team ${isTeam2Winner ? 'winner' : ''} ${isUpdatingTeam2 ? 'updating' : ''}`}
+                    onClick={() => match.team2 && !isUpdatingWinner && setWinner(match.id, match.team2.id)}
                   >
-                    {match.team2 ? match.team2.name : 'TBD'}
+                    {isUpdatingTeam2 ? (
+                      <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
+                    ) : (
+                      match.team2 ? match.team2.name : 'TBD'
+                    )}
                   </div>
                 </div>
               );
@@ -274,6 +313,14 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
 
   return (
     <div className="tournament-management">
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="loading">
+            <div className="loading-spinner" />
+            <div className="loading-text">Loading tournament details...</div>
+          </div>
+        </div>
+      )}
       <div className="tournament-header">
         <button className="back-button" onClick={onBack} aria-label="Back to Tournaments" />
         <div className="tournament-info">
@@ -294,6 +341,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                 onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
                 required
                 minLength={2}
+                disabled={isUpdatingTeam}
               />
               <div className="players-container">
                 {editingTeam.players.map((player, index) => (
@@ -307,8 +355,9 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                         updatedPlayers[index] = e.target.value;
                         setEditingTeam({ ...editingTeam, players: updatedPlayers });
                       }}
+                      disabled={isUpdatingTeam}
                     />
-                    {editingTeam.players.length > 2 && (
+                    {editingTeam.players.length > 2 && !isUpdatingTeam && (
                       <button
                         type="button"
                         className="remove-player-button"
@@ -323,16 +372,22 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                   </div>
                 ))}
               </div>
-              <button
-                type="button"
-                className="add-player-button"
-                onClick={() => setEditingTeam({ ...editingTeam, players: [...editingTeam.players, ''] })}
-              >
-                + Add Player
-              </button>
+              {!isUpdatingTeam && (
+                <button
+                  type="button"
+                  className="add-player-button"
+                  onClick={() => setEditingTeam({ ...editingTeam, players: [...editingTeam.players, ''] })}
+                >
+                  + Add Player
+                </button>
+              )}
               <div className="edit-actions">
-                <button type="submit">Save Changes</button>
-                <button type="button" onClick={() => setEditingTeam(null)}>Cancel</button>
+                <button type="submit" disabled={isUpdatingTeam}>
+                  {isUpdatingTeam ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button type="button" onClick={() => setEditingTeam(null)} disabled={isUpdatingTeam}>
+                  Cancel
+                </button>
               </div>
             </form>
           ) : (
@@ -344,6 +399,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                 onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
                 required
                 minLength={2}
+                disabled={isAddingTeam}
               />
               <div className="players-container">
                 {newTeam.players.map((player, index) => (
@@ -357,8 +413,9 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                         updatedPlayers[index] = e.target.value;
                         setNewTeam({ ...newTeam, players: updatedPlayers });
                       }}
+                      disabled={isAddingTeam}
                     />
-                    {newTeam.players.length > 2 && (
+                    {newTeam.players.length > 2 && !isAddingTeam && (
                       <button
                         type="button"
                         className="remove-player-button"
@@ -373,18 +430,22 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                   </div>
                 ))}
               </div>
-              <button
-                type="button"
-                className="add-player-button"
-                onClick={() => setNewTeam({ ...newTeam, players: [...newTeam.players, ''] })}
-              >
-                + Add Player
+              {!isAddingTeam && (
+                <button
+                  type="button"
+                  className="add-player-button"
+                  onClick={() => setNewTeam({ ...newTeam, players: [...newTeam.players, ''] })}
+                >
+                  + Add Player
+                </button>
+              )}
+              <button type="submit" disabled={isAddingTeam}>
+                {isAddingTeam ? 'Registering Team...' : 'Register Team'}
               </button>
-              <button type="submit">Register Team</button>
             </form>
           )}
 
-          <div className="teams-list">
+          <div className={`teams-list ${isLoading ? 'loading-section' : ''}`}>
             {teams.map(team => (
               <div key={team.id} className="team-card">
                 <div className="team-header">
@@ -394,15 +455,25 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                       className="edit-button"
                       onClick={() => setEditingTeam(team)}
                       title="Edit Team"
+                      disabled={isDeletingTeam === team.id || isUpdatingTeam}
                     >
-                      ✎
+                      {isUpdatingTeam && editingTeam?.id === team.id ? (
+                        <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
+                      ) : (
+                        '✎'
+                      )}
                     </button>
                     <button
                       className="delete-button"
                       onClick={() => handleDeleteTeam(team.id)}
                       title="Delete Team"
+                      disabled={isDeletingTeam === team.id || isUpdatingTeam}
                     >
-                      ×
+                      {isDeletingTeam === team.id ? (
+                        <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
+                      ) : (
+                        '×'
+                      )}
                     </button>
                   </div>
                 </div>
@@ -412,8 +483,18 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
           </div>
 
           <div className="teams-controls">
-            <button onClick={startTournament} disabled={teams.length < 2}>
-              Start Tournament
+            <button 
+              onClick={startTournament} 
+              disabled={teams.length < 2 || isStartingTournament}
+            >
+              {isStartingTournament ? (
+                <>
+                  <div className="loading-spinner" style={{ width: '20px', height: '20px', marginRight: '8px' }} />
+                  Starting Tournament...
+                </>
+              ) : (
+                'Start Tournament'
+              )}
             </button>
           </div>
         </div>
@@ -428,7 +509,9 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
               {isTeamSectionVisible ? 'Hide Teams' : 'Show Teams'}
             </button>
           </div>
-          {renderBracket()}
+          <div className={isLoading ? 'loading-section' : ''}>
+            {renderBracket()}
+          </div>
         </div>
       </div>
     </div>

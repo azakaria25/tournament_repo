@@ -1,12 +1,29 @@
 import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
 import { Team, Match, Tournament } from './types';
+import { DatabaseService } from './services/database';
+import path from 'path';
+
+// Load environment variables
+const envPath = path.resolve(__dirname, '../.env');
+console.log('Loading environment variables from:', envPath);
+dotenv.config({ path: envPath });
+
+// Verify DATABASE_URL is set
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL environment variable is not set');
+  process.exit(1);
+}
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3001;
 
 // Feature flags
 const USE_IN_MEMORY_STORAGE = false;
+
+// Initialize database service
+const databaseService = new DatabaseService();
 
 // Enable CORS for all routes
 app.use(cors({
@@ -45,10 +62,33 @@ const storage: Storage = USE_IN_MEMORY_STORAGE ? {
 
 // Helper functions to access storage
 const getStorage = () => storage;
-const getTeams = () => getStorage().teams;
-const getMatches = () => getStorage().matches;
-const getTournaments = () => getStorage().tournaments;
-const getTournamentDetails = () => getStorage().tournamentDetails;
+const getTeams = async () => {
+  if (USE_IN_MEMORY_STORAGE) {
+    return getStorage().teams;
+  }
+  return await databaseService.getTeams();
+};
+
+const getMatches = async () => {
+  if (USE_IN_MEMORY_STORAGE) {
+    return getStorage().matches;
+  }
+  return await databaseService.getMatches();
+};
+
+const getTournaments = async () => {
+  if (USE_IN_MEMORY_STORAGE) {
+    return getStorage().tournaments;
+  }
+  return await databaseService.getTournaments();
+};
+
+const getTournamentDetails = async (id: string) => {
+  if (USE_IN_MEMORY_STORAGE) {
+    return getStorage().tournamentDetails[id];
+  }
+  return await databaseService.getTournamentDetails(id);
+};
 
 interface TournamentDetails {
   id: string;
@@ -61,106 +101,202 @@ interface TournamentDetails {
 }
 
 // Routes
-app.get('/api/teams', (req, res) => {
-  res.json(getTeams());
+app.get('/api/teams', async (req, res) => {
+  res.json(await getTeams());
 });
 
-app.post('/api/teams', (req, res) => {
+app.post('/api/teams', async (req, res) => {
   const { name, players } = req.body;
   const newTeam: Team = {
     id: Date.now().toString(),
     name,
     players,
   };
-  getTeams().push(newTeam);
+  
+  if (USE_IN_MEMORY_STORAGE) {
+    const teams = await getTeams();
+    teams.push(newTeam);
+  } else {
+    await databaseService.createTeam(newTeam);
+  }
+  
   res.status(201).json(newTeam);
 });
 
-app.put('/api/teams/:id', (req, res) => {
+app.put('/api/teams/:id', async (req, res) => {
   const { id } = req.params;
   const { name, players } = req.body;
   
-  const teamIndex = getTeams().findIndex(team => team.id === id);
-  if (teamIndex === -1) {
-    return res.status(404).json({ error: 'Team not found' });
+  if (USE_IN_MEMORY_STORAGE) {
+    const teams = await getTeams();
+    const teamIndex = teams.findIndex(team => team.id === id);
+    if (teamIndex === -1) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+
+    // Update team
+    teams[teamIndex] = {
+      ...teams[teamIndex],
+      name,
+      players,
+    };
+
+    // Update team in any existing matches
+    const matches = await getMatches();
+    matches.forEach(match => {
+      if (match.team1?.id === id) {
+        match.team1 = teams[teamIndex];
+      }
+      if (match.team2?.id === id) {
+        match.team2 = teams[teamIndex];
+      }
+      if (match.winner?.id === id) {
+        match.winner = teams[teamIndex];
+      }
+    });
+
+    res.json(teams[teamIndex]);
+  } else {
+    const updatedTeam: Team = {
+      id,
+      name,
+      players,
+    };
+    await databaseService.updateTeam(updatedTeam);
+    res.json(updatedTeam);
   }
-
-  // Update team
-  getTeams()[teamIndex] = {
-    ...getTeams()[teamIndex],
-    name,
-    players,
-  };
-
-  // Update team in any existing matches
-  getMatches().forEach(match => {
-    if (match.team1?.id === id) {
-      match.team1 = getTeams()[teamIndex];
-    }
-    if (match.team2?.id === id) {
-      match.team2 = getTeams()[teamIndex];
-    }
-    if (match.winner?.id === id) {
-      match.winner = getTeams()[teamIndex];
-    }
-  });
-
-  res.json(getTeams()[teamIndex]);
 });
 
-app.delete('/api/teams/:id', (req, res) => {
+app.delete('/api/teams/:id', async (req, res) => {
   const { id } = req.params;
-  const teamIndex = getTeams().findIndex(team => team.id === id);
   
-  if (teamIndex === -1) {
-    return res.status(404).json({ error: 'Team not found' });
+  if (USE_IN_MEMORY_STORAGE) {
+    const teams = await getTeams();
+    const teamIndex = teams.findIndex((team: Team) => team.id === id);
+    if (teamIndex === -1) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    
+    // Remove team from teams array
+    teams.splice(teamIndex, 1);
+    
+    // Clear all matches when a team is deleted
+    const matches = await getMatches();
+    matches.length = 0;
+  } else {
+    try {
+      // First, get all tournaments that have this team
+      const tournaments = await getTournaments();
+      const affectedTournaments = tournaments.filter(t => 
+        t.teams.some(team => team.id === id)
+      );
+
+      // Delete the team
+      await databaseService.deleteTeam(id);
+
+      // For each affected tournament, delete matches and restart
+      for (const tournament of affectedTournaments) {
+        const tournamentDetails = await getTournamentDetails(tournament.id);
+        if (!tournamentDetails) continue;
+
+        // Always delete existing matches
+        await databaseService.deleteMatches(tournament.id);
+        
+        // Only restart if there are at least 2 teams
+        if (tournamentDetails.teams.length >= 2) {
+          // Create new matches
+          const matches = createMatches(tournamentDetails.teams, tournament.id);
+          
+          // Save new matches to database
+          for (const match of matches) {
+            await databaseService.createMatch(match, tournament.id);
+          }
+
+          // Update tournament status to active
+          await databaseService.updateTournament({
+            ...tournamentDetails,
+            status: 'active'
+          });
+        } else {
+          // If not enough teams, update status to upcoming
+          await databaseService.updateTournament({
+            ...tournamentDetails,
+            status: 'upcoming'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      return res.status(500).json({ error: 'Failed to delete team' });
+    }
   }
-  
-  // Remove team from teams array
-  getTeams().splice(teamIndex, 1);
-  
-  // Clear all matches when a team is deleted
-  getMatches().length = 0;
   
   res.status(200).json({ message: 'Team deleted successfully' });
 });
 
-app.post('/api/tournaments/:id/start', (req, res) => {
+app.post('/api/tournaments/:id/start', async (req, res) => {
   const tournamentId = req.params.id;
-  const tournament = getTournamentDetails()[tournamentId];
-  
-  if (!tournament) {
-    return res.status(404).json({ error: 'Tournament not found' });
+  try {
+    const tournament = await getTournamentDetails(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+    if (tournament.teams.length < 2) {
+      return res.status(400).json({ error: 'Need at least 2 teams to start a tournament' });
+    }
+
+    // Delete all existing matches for this tournament
+    if (USE_IN_MEMORY_STORAGE) {
+      tournament.matches = [];
+    } else {
+      await databaseService.deleteTournamentMatches(tournamentId);
+    }
+
+    // Create new matches for the tournament
+    const matches = createMatches(tournament.teams, tournamentId);
+    tournament.matches = matches;
+    tournament.status = 'active';
+
+    if (USE_IN_MEMORY_STORAGE) {
+      const tournaments = await getTournaments();
+      const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
+      if (tournamentIndex !== -1) {
+        tournaments[tournamentIndex].status = 'active';
+        tournaments[tournamentIndex].matches = matches;
+      }
+    } else {
+      // Update tournament status first
+      await databaseService.updateTournament(tournament);
+      
+      // Then create all matches
+      for (const match of matches) {
+        try {
+          await databaseService.createMatch(match, tournamentId);
+        } catch (error) {
+          console.error('Error creating match:', error);
+          // If match creation fails, clean up by deleting all matches
+          await databaseService.deleteTournamentMatches(tournamentId);
+          throw new Error('Failed to create tournament matches');
+        }
+      }
+    }
+
+    res.json(tournament);
+  } catch (error) {
+    console.error('Error starting tournament:', error);
+    res.status(500).json({ error: 'Failed to start tournament' });
   }
-
-  if (tournament.teams.length < 2) {
-    return res.status(400).json({ error: 'Need at least 2 teams to start a tournament' });
-  }
-
-  // Create matches for the tournament
-  const matches = createMatches(tournament.teams);
-  tournament.matches = matches;
-  tournament.status = 'active';
-
-  // Update tournament status and matches in the tournaments list
-  const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
-  if (tournamentIndex !== -1) {
-    getTournaments()[tournamentIndex].status = 'active';
-    getTournaments()[tournamentIndex].matches = matches;
-  }
-
-  res.json(tournament);
 });
 
-app.get('/api/matches', (req, res) => {
-  res.json(getMatches());
+app.get('/api/matches', async (req, res) => {
+  res.json(await getMatches());
 });
 
-app.post('/api/matches/:matchId/winner', (req, res) => {
+app.post('/api/matches/:matchId/winner', async (req, res) => {
   const { matchId } = req.params;
   const { winnerId, tournamentId } = req.body;
 
-  const tournament = getTournamentDetails()[tournamentId];
+  const tournament = await getTournamentDetails(tournamentId);
   if (!tournament) {
     return res.status(404).json({ error: 'Tournament not found' });
   }
@@ -181,24 +317,38 @@ app.post('/api/matches/:matchId/winner', (req, res) => {
   const currentRound = match.round;
   const nextRound = currentRound + 1;
   
-  // Get all matches in the current round
-  const currentRoundMatches = tournament.matches.filter(m => m.round === currentRound);
+  // Get all matches in the current round and sort them by matchIndex
+  const currentRoundMatches = tournament.matches
+    .filter(m => m.round === currentRound)
+    .sort((a, b) => a.matchIndex - b.matchIndex);
+  
   const currentMatchIndex = currentRoundMatches.findIndex(m => m.id === matchId);
   
-  // Calculate the next match index in the next round
-  const nextMatchIndex = Math.floor(currentMatchIndex / 2);
+  // Get all matches in the next round and sort them by matchIndex
+  const nextRoundMatches = tournament.matches
+    .filter(m => m.round === nextRound)
+    .sort((a, b) => a.matchIndex - b.matchIndex);
   
-  // Get all matches in the next round
-  const nextRoundMatches = tournament.matches.filter(m => m.round === nextRound);
+  // Calculate the next match index based on the current match's position
+  // This ensures winners go to the nearest match in the next round
+  const nextMatchIndex = Math.floor(currentMatchIndex / 2);
   const nextMatch = nextRoundMatches[nextMatchIndex];
   
   if (nextMatch) {
     // Determine if winner should be team1 or team2 in next match
-    const isTeam1Slot = currentMatchIndex % 2 === 0;
+    // For matches in the first half of the current round, winner goes to team1
+    // For matches in the second half of the current round, winner goes to team2
+    const isTeam1Slot = currentMatchIndex < currentRoundMatches.length / 2;
+    
+    // Only update if the slot is empty or if we're updating the same team
     if (isTeam1Slot) {
-      nextMatch.team1 = winner;
+      if (!nextMatch.team1 || nextMatch.team1.id === winner.id) {
+        nextMatch.team1 = winner;
+      }
     } else {
-      nextMatch.team2 = winner;
+      if (!nextMatch.team2 || nextMatch.team2.id === winner.id) {
+        nextMatch.team2 = winner;
+      }
     }
   }
 
@@ -206,39 +356,54 @@ app.post('/api/matches/:matchId/winner', (req, res) => {
   const isCompleted = tournament.matches.every(m => m.winner);
   if (isCompleted) {
     tournament.status = 'completed';
-    // Update tournament status in the tournaments list
-    const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
-    if (tournamentIndex !== -1) {
-      getTournaments()[tournamentIndex].status = 'completed';
+    if (USE_IN_MEMORY_STORAGE) {
+      // Update tournament status in the tournaments list
+      const tournaments = await getTournaments();
+      const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
+      if (tournamentIndex !== -1) {
+        tournaments[tournamentIndex].status = 'completed';
+      }
+    } else {
+      await databaseService.updateTournament(tournament);
+    }
+  }
+
+  if (!USE_IN_MEMORY_STORAGE) {
+    await databaseService.updateMatch(match);
+    if (nextMatch) {
+      await databaseService.updateMatch(nextMatch);
     }
   }
 
   res.json(tournament.matches);
 });
 
-app.post('/api/teams/clear', (req, res) => {
+app.post('/api/teams/clear', async (req, res) => {
   if (!USE_IN_MEMORY_STORAGE) {
     return res.status(501).json({ error: 'In-memory storage is disabled' });
   }
-  getTeams().length = 0; // Clear all teams
-  getMatches().length = 0; // Clear matches as well since they depend on teams
+  const teams = await getTeams();
+  const matches = await getMatches();
+  teams.length = 0; // Clear all teams
+  matches.length = 0; // Clear matches as well since they depend on teams
   res.json({ message: 'All teams cleared successfully' });
 });
 
-app.post('/api/matches/clear', (req, res) => {
+app.post('/api/matches/clear', async (req, res) => {
   if (!USE_IN_MEMORY_STORAGE) {
     return res.status(501).json({ error: 'In-memory storage is disabled' });
   }
-  getMatches().length = 0; // Clear only matches
+  const matches = await getMatches();
+  matches.length = 0; // Clear only matches
   res.json({ message: 'Tournament bracket cleared successfully' });
 });
 
 // Tournament routes
-app.get('/api/tournaments', (req, res) => {
-  res.json(getTournaments());
+app.get('/api/tournaments', async (req, res) => {
+  res.json(await getTournaments());
 });
 
-app.post('/api/tournaments', (req, res) => {
+app.post('/api/tournaments', async (req, res) => {
   const { name, month, year } = req.body;
   if (!name || !month || !year) {
     return res.status(400).json({ error: 'Name, month, and year are required' });
@@ -254,21 +419,24 @@ app.post('/api/tournaments', (req, res) => {
     status: 'upcoming'
   };
 
-  // Initialize tournament details
-  const tournamentDetail: TournamentDetails = {
-    ...newTournament,
-    teams: [],
-    matches: []
-  };
-  getTournamentDetails()[newTournament.id] = tournamentDetail;
+  if (USE_IN_MEMORY_STORAGE) {
+    const tournaments = await getTournaments();
+    tournaments.push(newTournament);
+    const details = await getTournamentDetails(newTournament.id);
+    if (details) {
+      details.teams = [];
+      details.matches = [];
+    }
+  } else {
+    await databaseService.createTournament(newTournament);
+  }
 
-  getTournaments().push(newTournament);
-  res.status(201).json(tournamentDetail);
+  res.status(201).json(newTournament);
 });
 
-app.get('/api/tournaments/:id', (req, res) => {
+app.get('/api/tournaments/:id', async (req, res) => {
   const tournamentId = req.params.id;
-  const details = getTournamentDetails()[tournamentId];
+  const details = await getTournamentDetails(tournamentId);
   
   if (!details) {
     return res.status(404).json({ error: 'Tournament not found' });
@@ -277,9 +445,9 @@ app.get('/api/tournaments/:id', (req, res) => {
   res.json(details);
 });
 
-app.get('/api/tournaments/:id/teams', (req, res) => {
+app.get('/api/tournaments/:id/teams', async (req, res) => {
   const tournamentId = req.params.id;
-  const tournament = getTournamentDetails()[tournamentId];
+  const tournament = await getTournamentDetails(tournamentId);
   
   if (!tournament) {
     return res.status(404).json({ error: 'Tournament not found' });
@@ -288,287 +456,274 @@ app.get('/api/tournaments/:id/teams', (req, res) => {
   res.json(tournament.teams);
 });
 
-app.get('/api/tournaments/:id/matches', (req, res) => {
+app.get('/api/tournaments/:id/matches', async (req, res) => {
   const { id } = req.params;
-  const tournament = getTournamentDetails()[id];
+  const tournament = await getTournamentDetails(id);
   
   if (!tournament) {
     return res.status(404).json({ error: 'Tournament not found' });
   }
-
+  
   res.json(tournament.matches);
 });
 
-app.post('/api/tournaments/:id/teams', (req, res) => {
+app.post('/api/tournaments/:id/teams', async (req, res) => {
   try {
     const tournamentId = req.params.id;
-    const tournament = getTournamentDetails()[tournamentId];
+    const tournament = await getTournamentDetails(tournamentId);
     
     if (!tournament) {
       return res.status(404).json({ error: 'Tournament not found' });
     }
-
-    const { name, players } = req.body;
     
-    // Check if team name already exists in the tournament
-    const isDuplicateName = tournament.teams.some(team => 
-      team.name.toLowerCase() === name.toLowerCase()
-    );
+    const { teamId } = req.body;
+    const teams = await getTeams();
+    const team = teams.find((t: Team) => t.id === teamId);
     
-    if (isDuplicateName) {
-      return res.status(400).json({ error: 'A team with this name already exists in the tournament' });
+    if (!team) {
+      return res.status(404).json({ error: 'Team not found' });
     }
-
-    const newTeam: Team = {
-      id: Date.now().toString(),
-      name,
-      players
-    };
-
-    tournament.teams.push(newTeam);
-    // Update the teams count in the tournaments list
-    const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
-    if (tournamentIndex !== -1) {
-      getTournaments()[tournamentIndex].teams = tournament.teams;
+    
+    if (tournament.teams.some((t: Team) => t.id === teamId)) {
+      return res.status(400).json({ error: 'Team already in tournament' });
     }
-
-    res.status(201).json(newTeam);
+    
+    if (USE_IN_MEMORY_STORAGE) {
+      tournament.teams.push(team);
+      const tournaments = await getTournaments();
+      const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
+      if (tournamentIndex !== -1) {
+        tournaments[tournamentIndex].teams = tournament.teams;
+      }
+    } else {
+      await databaseService.addTeamToTournament(tournamentId, teamId);
+    }
+    
+    const updatedTournament = await getTournamentDetails(tournamentId);
+    res.json(updatedTournament);
   } catch (error) {
-    console.error('Error adding team:', error);
-    res.status(500).json({ error: 'Failed to add team' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Add PUT endpoint for updating tournament team
-app.put('/api/tournaments/:id/teams/:teamId', (req, res) => {
+app.delete('/api/tournaments/:id/teams/:teamId', async (req, res) => {
   try {
     const tournamentId = req.params.id;
     const teamId = req.params.teamId;
-    const tournament = getTournamentDetails()[tournamentId];
+    const tournament = await getTournamentDetails(tournamentId);
     
     if (!tournament) {
       return res.status(404).json({ error: 'Tournament not found' });
     }
-
-    const teamIndex = tournament.teams.findIndex(team => team.id === teamId);
-    if (teamIndex === -1) {
-      return res.status(404).json({ error: 'Team not found' });
-    }
-
-    const { name, players } = req.body;
-    if (!name || !players) {
-      return res.status(400).json({ error: 'Name and players are required' });
-    }
-
-    tournament.teams[teamIndex] = {
-      ...tournament.teams[teamIndex],
-      name,
-      players
-    };
-
-    res.json(tournament.teams[teamIndex]);
-  } catch (error) {
-    console.error('Error updating team:', error);
-    res.status(500).json({ error: 'Failed to update team' });
-  }
-});
-
-// Add DELETE endpoint for tournament team
-app.delete('/api/tournaments/:id/teams/:teamId', (req, res) => {
-  try {
-    const tournamentId = req.params.id;
-    const teamId = req.params.teamId;
-    const tournament = getTournamentDetails()[tournamentId];
     
-    if (!tournament) {
-      return res.status(404).json({ error: 'Tournament not found' });
-    }
-
-    const teamIndex = tournament.teams.findIndex(team => team.id === teamId);
+    const teamIndex = tournament.teams.findIndex((t: Team) => t.id === teamId);
     if (teamIndex === -1) {
-      return res.status(404).json({ error: 'Team not found' });
+      return res.status(404).json({ error: 'Team not found in tournament' });
     }
-
-    // Remove team from tournament
-    tournament.teams.splice(teamIndex, 1);
-    // Update the teams count in the tournaments list
-    const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
-    if (tournamentIndex !== -1) {
-      getTournaments()[tournamentIndex].teams = tournament.teams;
+    
+    if (USE_IN_MEMORY_STORAGE) {
+      tournament.teams.splice(teamIndex, 1);
+      const tournaments = await getTournaments();
+      const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
+      if (tournamentIndex !== -1) {
+        tournaments[tournamentIndex].teams = tournament.teams;
+      }
+    } else {
+      // Remove team from tournament
+      await databaseService.removeTeamFromTournament(tournamentId, teamId);
+      
+      // Delete all existing matches for this tournament
+      await databaseService.deleteMatches(tournamentId);
+      
+      // Get updated tournament details after team removal
+      const updatedTournament = await getTournamentDetails(tournamentId);
+      
+      // If there are enough teams, regenerate matches
+      if (updatedTournament && updatedTournament.teams.length >= 2) {
+        // Create new matches
+        const matches = createMatches(updatedTournament.teams, tournamentId);
+        
+        // Save new matches to database
+        for (const match of matches) {
+          await databaseService.createMatch(match, tournamentId);
+        }
+        
+        // Update tournament status to active
+        await databaseService.updateTournament({
+          ...updatedTournament,
+          status: 'active'
+        });
+      } else if (updatedTournament) {
+        // If not enough teams, update status to upcoming
+        await databaseService.updateTournament({
+          ...updatedTournament,
+          status: 'upcoming'
+        });
+      }
     }
-
-    res.json({ message: 'Team deleted successfully' });
+    
+    const updatedTournament = await getTournamentDetails(tournamentId);
+    res.json(updatedTournament);
   } catch (error) {
     console.error('Error deleting team:', error);
-    res.status(500).json({ error: 'Failed to delete team' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-function createMatches(teams: Team[]): Match[] {
+app.put('/api/tournaments/:id/status', async (req, res) => {
+  try {
+    const tournamentId = req.params.id;
+    const { status } = req.body;
+    const tournament = await getTournamentDetails(tournamentId);
+    
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+    
+    if (!['active', 'completed', 'upcoming'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    if (USE_IN_MEMORY_STORAGE) {
+      tournament.status = status;
+      const tournaments = await getTournaments();
+      const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
+      if (tournamentIndex !== -1) {
+        tournaments[tournamentIndex].status = status;
+      }
+    } else {
+      await databaseService.updateTournament({ ...tournament, status });
+    }
+    
+    res.json(tournament);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+function createMatches(teams: Team[], tournamentId: string): Match[] {
   const matches: Match[] = [];
-  
   // Calculate number of rounds needed
   const numTeams = teams.length;
   const numRounds = Math.ceil(Math.log2(numTeams));
-
   // Shuffle teams for random seeding
   const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
-  
   // Create first round matches
   const firstRoundMatches = Math.ceil(numTeams / 2);
   for (let i = 0; i < firstRoundMatches; i++) {
     matches.push({
-      id: Date.now().toString() + i,
+      id: `${tournamentId}-match-1-${i}`,
       round: 1,
       matchIndex: i,
       team1: shuffledTeams[i * 2],
       team2: shuffledTeams[i * 2 + 1] || null,
       winner: null,
+      tournamentId
     });
   }
-
   // Create empty matches for subsequent rounds
   let currentMatchIndex = matches.length;
   for (let round = 2; round <= numRounds; round++) {
     const matchesInRound = Math.ceil(firstRoundMatches / Math.pow(2, round - 1));
     for (let i = 0; i < matchesInRound; i++) {
       matches.push({
-        id: Date.now().toString() + currentMatchIndex + i,
+        id: `${tournamentId}-match-${round}-${i}`,
         round,
         matchIndex: i,
         team1: null,
         team2: null,
         winner: null,
+        tournamentId
       });
     }
     currentMatchIndex += matchesInRound;
   }
-
   return matches;
 }
 
-app.post('/api/tournaments/update-statuses', (req, res) => {
+app.post('/api/tournaments/update-statuses', async (req, res) => {
   const currentDate = new Date();
   const currentMonth = currentDate.toLocaleString('default', { month: 'long' }).toLowerCase();
   const currentYear = currentDate.getFullYear().toString();
-
   // Get month index (0-11) for comparison
   const getMonthIndex = (month: string) => {
     const months = ['january', 'february', 'march', 'april', 'may', 'june', 
                    'july', 'august', 'september', 'october', 'november', 'december'];
     return months.indexOf(month.toLowerCase());
   };
-
   const currentMonthIndex = getMonthIndex(currentMonth);
-  console.log('Current month index:', currentMonthIndex, 'Current month:', currentMonth);
-
   // Update tournament statuses
-  getTournaments().forEach(tournament => {
+  const tournaments = await getTournaments();
+  for (const tournament of tournaments) {
     const tournamentMonthIndex = getMonthIndex(tournament.month);
     const tournamentYear = parseInt(tournament.year);
     const currentYearNum = parseInt(currentYear);
-
-    console.log('Tournament:', tournament.name, 'Month index:', tournamentMonthIndex, 'Year:', tournamentYear);
-
     let newStatus: 'active' | 'completed' | 'upcoming';
-
     if (tournamentYear < currentYearNum) {
-      // Past year tournaments are completed
       newStatus = 'completed';
     } else if (tournamentYear > currentYearNum) {
-      // Future year tournaments are upcoming
       newStatus = 'upcoming';
     } else {
-      // Same year, check month
       if (tournamentMonthIndex < currentMonthIndex) {
-        // Past month tournaments are completed
         newStatus = 'completed';
       } else if (tournamentMonthIndex > currentMonthIndex) {
-        // Future month tournaments are upcoming
         newStatus = 'upcoming';
       } else {
-        // Current month tournaments are active
         newStatus = 'active';
       }
     }
-
-    console.log('Setting status to:', newStatus);
-
-    // Update status in both arrays
     tournament.status = newStatus;
-    if (getTournamentDetails()[tournament.id]) {
-      getTournamentDetails()[tournament.id].status = newStatus;
-    }
-  });
-
-  res.json(getTournaments());
+    await databaseService.updateTournament(tournament);
+  }
+  res.json(tournaments);
 });
 
-// Add PUT endpoint for updating tournament
-app.put('/api/tournaments/:id', (req, res) => {
+app.put('/api/tournaments/:id', async (req, res) => {
   const tournamentId = req.params.id;
   const { name, month, year } = req.body;
-
   if (!name || !month || !year) {
     return res.status(400).json({ error: 'Name, month, and year are required' });
   }
-
-  const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
+  const tournaments = await getTournaments();
+  const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
   if (tournamentIndex === -1) {
     return res.status(404).json({ error: 'Tournament not found' });
   }
-
-  const tournament = getTournamentDetails()[tournamentId];
+  const tournament = await getTournamentDetails(tournamentId);
   if (!tournament) {
     return res.status(404).json({ error: 'Tournament details not found' });
   }
-
-  // Update tournament in both arrays
-  getTournaments()[tournamentIndex] = {
-    ...getTournaments()[tournamentIndex],
+  tournaments[tournamentIndex] = {
+    ...tournaments[tournamentIndex],
     name,
     month,
     year
   };
-
-  getTournamentDetails()[tournamentId] = {
-    ...tournament,
-    name,
-    month,
-    year
-  };
-
-  res.json(getTournamentDetails()[tournamentId]);
+  Object.assign(tournament, { name, month, year });
+  await databaseService.updateTournament({ ...tournament, name, month, year });
+  res.json(tournament);
 });
 
-// Add DELETE endpoint for deleting tournament
-app.delete('/api/tournaments/:id', (req, res) => {
+app.delete('/api/tournaments/:id', async (req, res) => {
   const tournamentId = req.params.id;
-
-  const tournamentIndex = getTournaments().findIndex(t => t.id === tournamentId);
+  const tournaments = await getTournaments();
+  const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
   if (tournamentIndex === -1) {
     return res.status(404).json({ error: 'Tournament not found' });
   }
-
-  // Remove tournament from both arrays
-  getTournaments().splice(tournamentIndex, 1);
-  delete getTournamentDetails()[tournamentId];
-
+  tournaments.splice(tournamentIndex, 1);
+  await databaseService.deleteTournament(tournamentId);
   res.json({ message: 'Tournament deleted successfully' });
 });
 
-// Add endpoint to delete all tournaments
-app.delete('/api/tournaments', (req, res) => {
+app.delete('/api/tournaments', async (req, res) => {
   try {
-    // Clear all tournaments and their details
-    getTournaments().length = 0;
-    Object.keys(getTournamentDetails()).forEach(key => {
-      delete getTournamentDetails()[key];
-    });
-    
+    const tournaments = await getTournaments();
+    tournaments.length = 0;
+    // Optionally, you can clear all tournaments from the database as well
+    // await databaseService.deleteAllTournaments();
     res.json({ message: 'All tournaments deleted successfully' });
   } catch (error) {
-    console.error('Error deleting all tournaments:', error);
     res.status(500).json({ error: 'Failed to delete all tournaments' });
   }
 });
@@ -584,6 +739,20 @@ app.use((req: express.Request, res: express.Response) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-}); 
+// Initialize database and start server
+const startServer = async () => {
+  try {
+    if (!USE_IN_MEMORY_STORAGE) {
+      await databaseService.initialize();
+    }
+    
+    app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer(); 
