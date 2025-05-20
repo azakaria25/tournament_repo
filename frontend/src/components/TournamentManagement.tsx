@@ -173,7 +173,12 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
       }
 
       const updatedMatches = await response.json();
+      
+      // Update the matches state with the new data
       setMatches(updatedMatches);
+      
+      // Also update the tournament's matches to ensure consistency
+      tournament.matches = updatedMatches;
     } catch (error) {
       console.error('Error updating match winner:', error);
       alert('Failed to update match winner. Please try again.');
@@ -269,8 +274,27 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
       return `Round ${roundNum}`;
     };
 
+    // Check if tournament is completed
+    const isCompleted = matches.every(m => m.winner);
+    const finalMatch = matches.find(m => m.round === sortedRounds.length);
+    const champion = finalMatch?.winner;
+
     return (
       <div className="bracket">
+        {isCompleted && champion && (
+          <div className="champion-celebration">
+            <div className="champion-box">
+              <h2>🏆 Champion 🏆</h2>
+              <div className="champion-name">{champion.name}</div>
+              <div className="champion-players">{champion.players.join(' & ')}</div>
+            </div>
+            <div className="fireworks">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="firework" style={{ '--delay': `${i * 0.5}s` } as React.CSSProperties} />
+              ))}
+            </div>
+          </div>
+        )}
         {sortedRounds.map(([round, roundMatches]) => (
           <div key={round} className="round">
             <h3>{getRoundName(round, sortedRounds.length)}</h3>
@@ -279,11 +303,13 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
               const isTeam2Winner = match.winner?.id === match.team2?.id;
               const isUpdatingTeam1 = isUpdatingWinner === match.id && isTeam1Winner;
               const isUpdatingTeam2 = isUpdatingWinner === match.id && isTeam2Winner;
+              const isFinalMatch = match.round === sortedRounds.length;
+              const isChampion = isFinalMatch && (isTeam1Winner || isTeam2Winner);
 
               return (
-                <div key={match.id} className="match">
+                <div key={match.id} className={`match ${isFinalMatch ? 'final-match' : ''}`}>
                   <div 
-                    className={`team ${isTeam1Winner ? 'winner' : ''} ${isUpdatingTeam1 ? 'updating' : ''}`}
+                    className={`team ${isTeam1Winner ? 'winner' : ''} ${isUpdatingTeam1 ? 'updating' : ''} ${isChampion && isTeam1Winner ? 'champion' : ''}`}
                     onClick={() => match.team1 && !isUpdatingWinner && setWinner(match.id, match.team1.id)}
                   >
                     {isUpdatingTeam1 ? (
@@ -293,7 +319,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                     )}
                   </div>
                   <div 
-                    className={`team ${isTeam2Winner ? 'winner' : ''} ${isUpdatingTeam2 ? 'updating' : ''}`}
+                    className={`team ${isTeam2Winner ? 'winner' : ''} ${isUpdatingTeam2 ? 'updating' : ''} ${isChampion && isTeam2Winner ? 'champion' : ''}`}
                     onClick={() => match.team2 && !isUpdatingWinner && setWinner(match.id, match.team2.id)}
                   >
                     {isUpdatingTeam2 ? (

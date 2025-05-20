@@ -314,41 +314,29 @@ app.post('/api/matches/:matchId/winner', async (req, res) => {
   match.winner = winner;
 
   // Find the next round match for this winner
-  const currentRound = match.round;
-  const nextRound = currentRound + 1;
-  
-  // Get all matches in the current round and sort them by matchIndex
-  const currentRoundMatches = tournament.matches
-    .filter(m => m.round === currentRound)
-    .sort((a, b) => a.matchIndex - b.matchIndex);
-  
-  const currentMatchIndex = currentRoundMatches.findIndex(m => m.id === matchId);
-  
-  // Get all matches in the next round and sort them by matchIndex
-  const nextRoundMatches = tournament.matches
-    .filter(m => m.round === nextRound)
-    .sort((a, b) => a.matchIndex - b.matchIndex);
-  
-  // Calculate the next match index based on the current match's position
-  // This ensures winners go to the nearest match in the next round
-  const nextMatchIndex = Math.floor(currentMatchIndex / 2);
-  const nextMatch = nextRoundMatches[nextMatchIndex];
-  
+  const nextRound = match.round + 1;
+  if (nextRound > Math.ceil(Math.log2(tournament.matches.length))) {
+    // This was the final match
+    if (!USE_IN_MEMORY_STORAGE) {
+      await databaseService.updateMatch(match);
+    }
+    return res.json(tournament.matches);
+  }
+
+  // Calculate the next match index using binary tree traversal
+  const nextMatchIndex = Math.floor(match.matchIndex / 2);
+  const nextMatch = tournament.matches.find(m => 
+    m.round === nextRound && 
+    m.matchIndex === nextMatchIndex
+  );
+
   if (nextMatch) {
-    // Determine if winner should be team1 or team2 in next match
-    // For matches in the first half of the current round, winner goes to team1
-    // For matches in the second half of the current round, winner goes to team2
-    const isTeam1Slot = currentMatchIndex < currentRoundMatches.length / 2;
-    
-    // Only update if the slot is empty or if we're updating the same team
-    if (isTeam1Slot) {
-      if (!nextMatch.team1 || nextMatch.team1.id === winner.id) {
-        nextMatch.team1 = winner;
-      }
+    // In a single elimination bracket, the position in the next round is determined by the match index
+    // Even indices go to team1, odd indices go to team2
+    if (match.matchIndex % 2 === 0) {
+      nextMatch.team1 = winner;
     } else {
-      if (!nextMatch.team2 || nextMatch.team2.id === winner.id) {
-        nextMatch.team2 = winner;
-      }
+      nextMatch.team2 = winner;
     }
   }
 
