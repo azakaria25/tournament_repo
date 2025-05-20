@@ -1,34 +1,41 @@
 import { Match, Team } from '../types';
 
-export const createMatches = (teams: Team[]): Match[] => {
+export const createMatches = (teams: Team[], tournamentId: string): Match[] => {
   const matches: Match[] = [];
-  let round = 1;
-  let currentTeams = [...teams];
+  const numTeams = teams.length;
+  const numRounds = Math.ceil(Math.log2(numTeams));
   
-  // Shuffle teams for random matchups
-  currentTeams = shuffleArray(currentTeams);
+  // Shuffle teams for random seeding
+  const shuffledTeams = shuffleArray(teams);
   
-  while (currentTeams.length > 1) {
-    const roundMatches: Match[] = [];
-    const matchCount = Math.ceil(currentTeams.length / 2);
-    
-    for (let i = 0; i < matchCount; i++) {
-      const team1 = currentTeams[i * 2];
-      const team2 = currentTeams[i * 2 + 1];
-      
-      roundMatches.push({
-        id: `match-${round}-${i}`,
+  // Create first round matches
+  const firstRoundMatches = Math.ceil(numTeams / 2);
+  for (let i = 0; i < firstRoundMatches; i++) {
+    matches.push({
+      id: `${tournamentId}-match-1-${i}`,
+      tournamentId,
+      round: 1,
+      matchIndex: i,
+      team1: shuffledTeams[i * 2] || null,
+      team2: shuffledTeams[i * 2 + 1] || null,
+      winner: null,
+    });
+  }
+  
+  // Create empty matches for subsequent rounds
+  for (let round = 2; round <= numRounds; round++) {
+    const matchesInRound = Math.ceil(firstRoundMatches / Math.pow(2, round - 1));
+    for (let i = 0; i < matchesInRound; i++) {
+      matches.push({
+        id: `${tournamentId}-match-${round}-${i}`,
+        tournamentId,
         round,
         matchIndex: i,
-        team1: team1 || null,
-        team2: team2 || null,
+        team1: null,
+        team2: null,
         winner: null,
       });
     }
-    
-    matches.push(...roundMatches);
-    currentTeams = new Array(Math.ceil(currentTeams.length / 2)).fill(null);
-    round++;
   }
   
   return matches;
@@ -46,6 +53,12 @@ export const advanceWinner = (matches: Match[], matchId: string, winnerId: strin
   
   // Find next match
   const nextRound = currentMatch.round + 1;
+  if (nextRound > Math.ceil(Math.log2(matches.length))) {
+    return updatedMatches; // This was the final match
+  }
+  
+  // Calculate the next match index using binary tree traversal
+  // In a single elimination bracket, each match's winner goes to a specific position in the next round
   const nextMatchIndex = Math.floor(currentMatch.matchIndex / 2);
   const nextMatch = updatedMatches.find(m => 
     m.round === nextRound && 
@@ -53,10 +66,9 @@ export const advanceWinner = (matches: Match[], matchId: string, winnerId: strin
   );
   
   if (nextMatch && winner) {
-    // Determine if winner should be team1 or team2 in next match
-    const isTeam1Slot = currentMatch.matchIndex % 2 === 0;
-    
-    if (isTeam1Slot) {
+    // In a single elimination bracket, the position in the next round is determined by the match index
+    // Even indices go to team1, odd indices go to team2
+    if (currentMatch.matchIndex % 2 === 0) {
       nextMatch.team1 = winner;
     } else {
       nextMatch.team2 = winner;
