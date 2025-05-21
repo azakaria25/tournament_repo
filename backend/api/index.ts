@@ -27,7 +27,12 @@ const databaseService = new DatabaseService();
 
 // Enable CORS for all routes
 app.use(cors({
-  origin: ['https://thiqah-padel-tournament.vercel.app', 'http://localhost:3000', 'https://tournament-repo-frontend.vercel.app'],
+  origin: [
+    'https://thiqah-padel-tournament.vercel.app',
+    'http://localhost:3000',
+    'https://tournament-repo-frontend.vercel.app',
+    'https://tournament-repo.vercel.app'
+  ],
   credentials: true
 }));
 
