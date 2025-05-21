@@ -33,6 +33,16 @@ app.use(cors({
 
 app.use(express.json());
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ message: 'Padel Tournament API is running' });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // In-memory storage (replace with database in production)
 let teams: Team[] = [];
 let matches: Match[] = [];
