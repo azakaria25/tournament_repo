@@ -2,12 +2,12 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Padel Tournament Backend",
-  "main": "api/index.ts",
+  "main": "dist/api/index.js",
   "scripts": {
-    "start": "node api/index.ts",
+    "start": "node dist/api/index.js",
     "dev": "nodemon api/index.ts",
     "build": "tsc",
-    "vercel-build": "npm run build"
+    "vercel-build": "npm install && npm run build"
   },
   "keywords": [],
   "author": "",
