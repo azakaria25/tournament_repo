@@ -260,6 +260,10 @@ export class DatabaseService {
   }
 
   async deleteAllTournaments(): Promise<void> {
-    // Implementation needed
+    // Delete all related data first due to foreign key constraints
+    await sql`DELETE FROM tournament_teams`;
+    await sql`DELETE FROM matches`;
+    await sql`DELETE FROM teams`;
+    await sql`DELETE FROM tournaments`;
   }
 } 

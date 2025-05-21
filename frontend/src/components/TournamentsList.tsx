@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './TournamentsList.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 interface Team {
   id: string;
   name: string;
@@ -160,7 +161,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     if (window.confirm('Are you sure you want to delete this tournament?')) {
       try {
         setIsDeletingTournament(tournamentId);
-        const response = await fetch(`$(API_URL)/api/tournaments/${tournamentId}`, {
+        const response = await fetch(`${API_URL}/api/tournaments/${tournamentId}`, {
           method: 'DELETE',
         });
 
@@ -186,7 +187,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
 
     try {
       setIsUpdatingTournament(editingTournament.id);
-      const response = await fetch(`$(API_URL)/api/tournaments/${editingTournament.id}`, {
+      const response = await fetch(`${API_URL}/api/tournaments/${editingTournament.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -222,7 +223,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     if (window.confirm('Are you sure you want to delete ALL tournaments? This action cannot be undone.')) {
       try {
         setIsDeletingAll(true);
-        const response = await fetch('$(API_URL)/api/tournaments', {
+        const response = await fetch(`${API_URL}/api/tournaments`, {
           method: 'DELETE',
         });
 

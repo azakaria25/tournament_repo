@@ -27,7 +27,7 @@ const databaseService = new DatabaseService();
 
 // Enable CORS for all routes
 app.use(cors({
-  origin: ['https://thiqah-padel-tournament.vercel.app', 'http://localhost:3000'],
+  origin: ['https://thiqah-padel-tournament.vercel.app', 'http://localhost:3000', 'https://tournament-repo-frontend.vercel.app'],
   credentials: true
 }));
 
@@ -708,8 +708,9 @@ app.delete('/api/tournaments', async (req, res) => {
   try {
     const tournaments = await getTournaments();
     tournaments.length = 0;
-    // Optionally, you can clear all tournaments from the database as well
-    // await databaseService.deleteAllTournaments();
+    if (!USE_IN_MEMORY_STORAGE) {
+      await databaseService.deleteAllTournaments();
+    }
     res.json({ message: 'All tournaments deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete all tournaments' });
