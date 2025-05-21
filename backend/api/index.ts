@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { Team, Match, Tournament } from './types';
-import { DatabaseService } from './services/database';
+import { Team, Match, Tournament } from '../src/types';
+import { DatabaseService } from '../src/services/database';
 import path from 'path';
 
 // Load environment variables
