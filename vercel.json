@@ -1,47 +1,24 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/build",
-  "framework": "create-react-app",
-  "env": {
-    "REACT_APP_API_URL": "https://padel-tournament-backend.vercel.app",
-    "NODE_ENV": "production",
-    "MONGODB_URI": "@mongodb_uri",
-    "JWT_SECRET": "@jwt_secret",
-    "CORS_ORIGIN": "https://padel-tournament.vercel.app"
-  },
-  "rewrites": [
+  "buildCommand": "cd backend && npm install && npm run build",
+  "outputDirectory": "backend/dist",
+  "builds": [
     {
-      "source": "/api/:path*",
-      "destination": "https://padel-tournament-backend.vercel.app/api/:path*"
-    },
-    {
-      "source": "/static/(.*)",
-      "destination": "/static/$1"
-    },
-    {
-      "source": "/assets/(.*)",
-      "destination": "/assets/$1"
-    },
-    {
-      "source": "/favicon.ico",
-      "destination": "/favicon.ico"
-    },
-    {
-      "source": "/manifest.json",
-      "destination": "/manifest.json"
-    },
-    {
-      "source": "/logo192.png",
-      "destination": "/logo192.png"
-    },
-    {
-      "source": "/logo512.png",
-      "destination": "/logo512.png"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "backend/dist/api/index.js",
+      "use": "@vercel/node"
     }
-  ]
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/backend/dist/api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/backend/dist/api/index.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 } 
