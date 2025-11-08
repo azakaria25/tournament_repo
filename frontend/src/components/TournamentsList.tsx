@@ -53,8 +53,8 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
   const [showPINModal, setShowPINModal] = useState(false);
   const [pinModalError, setPinModalError] = useState('');
   const [pendingAction, setPendingAction] = useState<{
-    type: 'update' | 'delete';
-    tournamentId: string;
+    type: 'update' | 'delete' | 'deleteAll';
+    tournamentId?: string;
     data?: { name: string; month: string; year: string };
   } | null>(null);
 
@@ -311,12 +311,22 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     
     console.log(`PIN confirmation: pin="${pin}", trimmedPin="${trimmedPin}", isSuperPin=${isSuperPin}`);
     
+    // For delete all, require super PIN
+    if (pendingAction.type === 'deleteAll') {
+      if (!isSuperPin) {
+        setPinModalError('Super PIN is required to delete all tournaments');
+        return;
+      }
+      await handleDeleteAllWithPIN(trimmedPin);
+      return;
+    }
+    
     if (isSuperPin) {
       console.log(`Super PIN used to ${pendingAction.type === 'update' ? 'update' : 'delete'} tournament`);
     }
     
     try {
-      if (pendingAction.type === 'update') {
+      if (pendingAction.type === 'update' && pendingAction.tournamentId) {
         setIsUpdatingTournament(pendingAction.tournamentId);
         
         const requestBody = {
@@ -356,7 +366,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
         setShowPINModal(false);
         setPendingAction(null);
         setPinError('');
-      } else if (pendingAction.type === 'delete') {
+      } else if (pendingAction.type === 'delete' && pendingAction.tournamentId) {
         setIsDeletingTournament(pendingAction.tournamentId);
         
         const requestBody = { pin: trimmedPin };
@@ -406,25 +416,42 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     setEditingTournament(null);
   };
 
-  const handleDeleteAllTournaments = async () => {
-    if (window.confirm('Are you sure you want to delete ALL tournaments? This action cannot be undone.')) {
-      try {
-        setIsDeletingAll(true);
-        const response = await fetch(`${API_URL}/api/tournaments`, {
-          method: 'DELETE',
-        });
+  const handleDeleteAllTournaments = () => {
+    // Always require super PIN for delete all
+    setPendingAction({ type: 'deleteAll' });
+    setShowPINModal(true);
+    setPinModalError('');
+  };
 
-        if (!response.ok) {
-          throw new Error('Failed to delete all tournaments');
+  const handleDeleteAllWithPIN = async (pin: string) => {
+    try {
+      setIsDeletingAll(true);
+      const response = await fetch(`${API_URL}/api/tournaments`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pin: pin.trim() }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 401) {
+          setPinModalError(errorData.error || 'Invalid super PIN code');
+          setIsDeletingAll(false);
+          return;
         }
-
-        onTournamentUpdate(); // Refresh the tournaments list
-      } catch (error) {
-        console.error('Error deleting all tournaments:', error);
-        alert('Failed to delete all tournaments. Please try again.');
-      } finally {
-        setIsDeletingAll(false);
+        throw new Error(errorData.error || 'Failed to delete all tournaments');
       }
+
+      onTournamentUpdate(); // Refresh the tournaments list
+      setShowPINModal(false);
+      setPendingAction(null);
+    } catch (error) {
+      console.error('Error deleting all tournaments:', error);
+      setPinModalError(error instanceof Error ? error.message : 'Failed to delete all tournaments');
+    } finally {
+      setIsDeletingAll(false);
     }
   };
 
@@ -677,12 +704,18 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
         isOpen={showPINModal}
         onClose={handlePINModalClose}
         onConfirm={handlePINConfirm}
-        title={pendingAction?.type === 'update' ? 'Enter PIN to Update Tournament' : 'Enter PIN to Delete Tournament'}
-        message={pendingAction?.type === 'update' 
+        title={pendingAction?.type === 'deleteAll' 
+          ? 'Enter Super PIN to Delete All Tournaments'
+          : pendingAction?.type === 'update' 
+          ? 'Enter PIN to Update Tournament' 
+          : 'Enter PIN to Delete Tournament'}
+        message={pendingAction?.type === 'deleteAll'
+          ? 'WARNING: This will delete ALL tournaments. Enter super PIN to proceed. This action cannot be undone.'
+          : pendingAction?.type === 'update' 
           ? 'Please enter the PIN code to update this tournament'
           : 'Please enter the PIN code to delete this tournament. This action cannot be undone.'}
         error={pinModalError}
-        isLoading={isUpdatingTournament !== null || isDeletingTournament !== null}
+        isLoading={isUpdatingTournament !== null || isDeletingTournament !== null || isDeletingAll}
       />
     </div>
   );

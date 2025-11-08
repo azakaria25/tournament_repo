@@ -944,6 +944,15 @@ app.delete('/api/tournaments/:id', async (req, res) => {
 
 app.delete('/api/tournaments', async (req, res) => {
   try {
+    // Super PIN "9999" is required to delete all tournaments
+    const SUPER_PIN = '9999';
+    const { pin } = req.body;
+    const providedPin = pin ? pin.trim() : '';
+    
+    if (!providedPin || providedPin !== SUPER_PIN) {
+      return res.status(401).json({ error: 'Super PIN is required to delete all tournaments' });
+    }
+    
     const tournaments = await getTournaments();
     tournaments.length = 0;
     if (!USE_IN_MEMORY_STORAGE) {
