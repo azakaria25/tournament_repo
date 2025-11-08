@@ -2,6 +2,7 @@ export interface Team {
   id: string;
   name: string;
   players: string[];
+  weight: number; // Weight/seed for tournament bracket (1-5, lower = higher seed, max 1 decimal)
 }
 
 export interface Match {
@@ -12,6 +13,8 @@ export interface Match {
   winner: Team | null;
   matchIndex: number;
   tournamentId: string;
+  courtNumber?: string; // Court number for the match
+  matchTime?: string; // Time for the match (e.g., "14:30" or "2:30 PM")
 }
 
 export interface Tournament {
@@ -22,6 +25,7 @@ export interface Tournament {
   teams: Team[];
   matches: Match[];
   status: 'active' | 'completed' | 'upcoming';
+  pin: string; // 4-digit PIN code
 }
 
 export interface TournamentDetails {
@@ -32,4 +36,5 @@ export interface TournamentDetails {
   teams: Team[];
   matches: Match[];
   status: 'active' | 'completed' | 'upcoming';
+  pin: string; // 4-digit PIN code
 } 

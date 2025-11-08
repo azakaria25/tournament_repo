@@ -22,8 +22,17 @@ export class DatabaseService {
       await sql`CREATE TABLE IF NOT EXISTS teams (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        players TEXT[] NOT NULL
+        players TEXT[] NOT NULL,
+        weight INTEGER
       )`;
+      
+      // Add weight column if it doesn't exist (for existing databases)
+      try {
+        await sql`ALTER TABLE teams ADD COLUMN IF NOT EXISTS weight INTEGER`;
+      } catch (error) {
+        // Column might already exist, ignore error
+        console.log('Weight column may already exist');
+      }
 
       await sql`CREATE TABLE IF NOT EXISTS matches (
         id TEXT PRIMARY KEY,
@@ -32,16 +41,36 @@ export class DatabaseService {
         team2_id TEXT REFERENCES teams(id),
         winner_id TEXT REFERENCES teams(id),
         match_index INTEGER NOT NULL,
-        tournament_id TEXT NOT NULL
+        tournament_id TEXT NOT NULL,
+        court_number TEXT,
+        match_time TEXT
       )`;
+      
+      // Add court_number and match_time columns if they don't exist (for existing databases)
+      try {
+        await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS court_number TEXT`;
+        await sql`ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_time TEXT`;
+      } catch (error) {
+        // Columns might already exist, ignore error
+        console.log('Court number and match time columns may already exist');
+      }
 
       await sql`CREATE TABLE IF NOT EXISTS tournaments (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         month TEXT NOT NULL,
         year TEXT NOT NULL,
-        status TEXT NOT NULL
+        status TEXT NOT NULL,
+        pin TEXT
       )`;
+      
+      // Add PIN column if it doesn't exist (for existing databases)
+      try {
+        await sql`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS pin TEXT`;
+      } catch (error) {
+        // Column might already exist, ignore error
+        console.log('PIN column may already exist');
+      }
 
       await sql`CREATE TABLE IF NOT EXISTS tournament_teams (
         tournament_id TEXT REFERENCES tournaments(id),
@@ -61,13 +90,18 @@ export class DatabaseService {
     const result = await sql`
       SELECT * FROM teams
     `;
-    return result as Team[];
+    return result.map((team: any) => ({
+      id: team.id,
+      name: team.name,
+      players: team.players,
+      weight: team.weight || 5 // Default to 5 if not set (for backward compatibility)
+    })) as Team[];
   }
 
   async createTeam(team: Team): Promise<Team> {
     await sql`
-      INSERT INTO teams (id, name, players)
-      VALUES (${team.id}, ${team.name}, ${team.players})
+      INSERT INTO teams (id, name, players, weight)
+      VALUES (${team.id}, ${team.name}, ${team.players}, ${team.weight})
     `;
     return team;
   }
@@ -75,7 +109,7 @@ export class DatabaseService {
   async updateTeam(team: Team): Promise<Team> {
     await sql`
       UPDATE teams
-      SET name = ${team.name}, players = ${team.players}
+      SET name = ${team.name}, players = ${team.players}, weight = ${team.weight}
       WHERE id = ${team.id}
     `;
     return team;
@@ -91,9 +125,9 @@ export class DatabaseService {
   async getMatches(): Promise<Match[]> {
     const result = await sql`
       SELECT m.*, 
-        t1.id as team1_id, t1.name as team1_name, t1.players as team1_players,
-        t2.id as team2_id, t2.name as team2_name, t2.players as team2_players,
-        w.id as winner_id, w.name as winner_name, w.players as winner_players
+        t1.id as team1_id, t1.name as team1_name, t1.players as team1_players, t1.weight as team1_weight,
+        t2.id as team2_id, t2.name as team2_name, t2.players as team2_players, t2.weight as team2_weight,
+        w.id as winner_id, w.name as winner_name, w.players as winner_players, w.weight as winner_weight
       FROM matches m
       LEFT JOIN teams t1 ON m.team1_id = t1.id
       LEFT JOIN teams t2 ON m.team2_id = t2.id
@@ -105,26 +139,31 @@ export class DatabaseService {
       team1: m.team1_id ? {
         id: m.team1_id,
         name: m.team1_name,
-        players: m.team1_players
+        players: m.team1_players,
+        weight: m.team1_weight || 5 // Default to 5 if not set (for backward compatibility)
       } : null,
       team2: m.team2_id ? {
         id: m.team2_id,
         name: m.team2_name,
-        players: m.team2_players
+        players: m.team2_players,
+        weight: m.team2_weight || 5 // Default to 5 if not set (for backward compatibility)
       } : null,
       winner: m.winner_id ? {
         id: m.winner_id,
         name: m.winner_name,
-        players: m.winner_players
+        players: m.winner_players,
+        weight: m.winner_weight || 5 // Default to 5 if not set (for backward compatibility)
       } : null,
       matchIndex: m.match_index,
-      tournamentId: m.tournament_id
+      tournamentId: m.tournament_id,
+      courtNumber: m.court_number || undefined,
+      matchTime: m.match_time || undefined
     }));
   }
 
   async createMatch(match: Match, tournamentId: string): Promise<Match> {
     await sql`
-      INSERT INTO matches (id, round, team1_id, team2_id, winner_id, match_index, tournament_id)
+      INSERT INTO matches (id, round, team1_id, team2_id, winner_id, match_index, tournament_id, court_number, match_time)
       VALUES (
         ${match.id},
         ${match.round},
@@ -132,7 +171,9 @@ export class DatabaseService {
         ${match.team2?.id},
         ${match.winner?.id},
         ${match.matchIndex},
-        ${tournamentId}
+        ${tournamentId},
+        ${match.courtNumber || null},
+        ${match.matchTime || null}
       )
     `;
     return { ...match, tournamentId };
@@ -143,7 +184,9 @@ export class DatabaseService {
       UPDATE matches
       SET team1_id = ${match.team1?.id},
           team2_id = ${match.team2?.id},
-          winner_id = ${match.winner?.id}
+          winner_id = ${match.winner?.id},
+          court_number = ${match.courtNumber || null},
+          match_time = ${match.matchTime || null}
       WHERE id = ${match.id}
     `;
     return match;
@@ -177,12 +220,14 @@ export class DatabaseService {
       month: tournament.month,
       year: tournament.year,
       status: tournament.status,
+      pin: tournament.pin || '', // Default to empty string for existing tournaments without PIN
       teams: teams
         .filter(team => team.tournament_id === tournament.id)
         .map(team => ({
           id: team.id,
           name: team.name,
-          players: team.players
+          players: team.players,
+          weight: team.weight || 5 // Default to 5 if not set (for backward compatibility)
         })),
       matches: matches.filter(match => match.tournamentId === tournament.id)
     }));
@@ -190,8 +235,8 @@ export class DatabaseService {
 
   async createTournament(tournament: Tournament): Promise<Tournament> {
     await sql`
-      INSERT INTO tournaments (id, name, month, year, status)
-      VALUES (${tournament.id}, ${tournament.name}, ${tournament.month}, ${tournament.year}, ${tournament.status})
+      INSERT INTO tournaments (id, name, month, year, status, pin)
+      VALUES (${tournament.id}, ${tournament.name}, ${tournament.month}, ${tournament.year}, ${tournament.status}, ${tournament.pin || ''})
     `;
     return tournament;
   }
@@ -202,7 +247,8 @@ export class DatabaseService {
       SET name = ${tournament.name},
           month = ${tournament.month},
           year = ${tournament.year},
-          status = ${tournament.status}
+          status = ${tournament.status},
+          pin = ${tournament.pin || ''}
       WHERE id = ${tournament.id}
     `;
     return tournament;
@@ -229,12 +275,21 @@ export class DatabaseService {
       JOIN tournament_teams tt ON tt.team_id = t.id
       WHERE tt.tournament_id = ${id}
     `;
+    
+    // Map teams to include weight
+    const mappedTeams = teams.map((team: any) => ({
+      id: team.id,
+      name: team.name,
+      players: team.players,
+      weight: team.weight || 5 // Default to 5 if not set (for backward compatibility)
+    })) as Team[];
 
     const matches = await this.getMatches();
 
     return {
       ...tournament,
-      teams: teams as Team[],
+      pin: (tournament as any).pin || '', // Default to empty string for existing tournaments without PIN
+      teams: mappedTeams,
       matches: matches.filter(m => m.tournamentId === id)
     };
   }

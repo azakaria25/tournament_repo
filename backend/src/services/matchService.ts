@@ -5,8 +5,16 @@ export const createMatches = (teams: Team[], tournamentId: string): Match[] => {
   const numTeams = teams.length;
   const numRounds = Math.ceil(Math.log2(numTeams));
   
-  // Shuffle teams for random seeding
-  const shuffledTeams = shuffleArray(teams);
+  // Professional bracket seeding: Sort teams by weight (lower weight = higher seed)
+  const sortedTeams = [...teams].sort((a, b) => {
+    const weightA = a.weight ?? 5; // Default to 5 if not set
+    const weightB = b.weight ?? 5;
+    return weightA - weightB; // Lower weight = higher seed
+  });
+  
+  // Professional bracket seeding algorithm
+  // Top seed plays bottom seed, 2nd plays 2nd-to-last, etc.
+  const seededTeams = seedBracket(sortedTeams);
   
   // Create first round matches
   const firstRoundMatches = Math.ceil(numTeams / 2);
@@ -16,8 +24,8 @@ export const createMatches = (teams: Team[], tournamentId: string): Match[] => {
       tournamentId,
       round: 1,
       matchIndex: i,
-      team1: shuffledTeams[i * 2] || null,
-      team2: shuffledTeams[i * 2 + 1] || null,
+      team1: seededTeams[i * 2] || null,
+      team2: seededTeams[i * 2 + 1] || null,
       winner: null,
     });
   }
@@ -40,6 +48,24 @@ export const createMatches = (teams: Team[], tournamentId: string): Match[] => {
   
   return matches;
 };
+
+// Professional bracket seeding: Top seed plays bottom seed
+function seedBracket(teams: Team[]): Team[] {
+  const seeded: Team[] = [];
+  const numTeams = teams.length;
+  
+  // For professional bracket seeding:
+  // Seed 1 plays Seed N, Seed 2 plays Seed N-1, etc.
+  for (let i = 0; i < Math.ceil(numTeams / 2); i++) {
+    const topSeed = teams[i];
+    const bottomSeed = teams[numTeams - 1 - i];
+    
+    if (topSeed) seeded.push(topSeed);
+    if (bottomSeed && bottomSeed.id !== topSeed?.id) seeded.push(bottomSeed);
+  }
+  
+  return seeded;
+}
 
 export const advanceWinner = (matches: Match[], matchId: string, winnerId: string): Match[] => {
   const updatedMatches = [...matches];

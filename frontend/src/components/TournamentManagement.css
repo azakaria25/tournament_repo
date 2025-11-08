@@ -39,6 +39,49 @@
   position: relative;
 }
 
+.content.blurred {
+  filter: blur(5px);
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.5;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: 12px;
+}
+
+.role-badge.admin {
+  background-color: #2196F3;
+  color: white;
+}
+
+.role-badge.viewer {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.viewer-mode {
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
+.viewer-mode:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.viewer-notice {
+  padding: 10px;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+
 .teams-section {
   width: 300px;
   background: white;
@@ -393,6 +436,80 @@
   background: #e8f5e9;
 }
 
+.team-seed {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 600;
+  margin-right: 6px;
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.match-details {
+  padding: 6px 10px;
+  background: #f9f9f9;
+  border-top: 1px solid #ddd;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  color: #666;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.match-details:hover {
+  background: #f0f0f0;
+}
+
+.court-number {
+  font-weight: 600;
+  color: #2196f3;
+}
+
+.match-time {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.match-details-edit {
+  padding: 6px 10px;
+  background: #fff;
+  border-top: 1px solid #ddd;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.match-details-edit input {
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 4px;
+}
+
+.match-details-edit button {
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.match-details-edit button:hover {
+  background: #45a049;
+}
+
+.match-details-edit button:last-child {
+  background: #f44336;
+}
+
+.match-details-edit button:last-child:hover {
+  background: #da190b;
+}
+
 .back-button {
   background: #ff9800;
   color: #fff;
@@ -618,28 +735,45 @@ h2{
         font-size:1.8rem
     }
     .content{
-        padding:20px
-    }
-    .bracket,.content{
+        padding:20px;
         flex-direction:column
     }
     .bracket{
-        align-items:center
+        flex-direction:row;
+        justify-content:flex-start;
+        overflow-x:auto;
+        overflow-y:visible;
+        align-items:stretch;
+        padding:20px;
+        gap:40px
     }
     .round{
-        margin:20px 0;
-        min-width:250px
+        margin:0 20px;
+        min-width:200px;
+        flex-shrink:0
     }
     .round:not(:last-child):after{
-        border:none;
+        border-bottom:2px solid #1a1a1a;
         border-right:2px solid #1a1a1a;
-        height:20px;
-        right:50%;
-        top:100%;
-        width:2px
+        border-top:2px solid #1a1a1a;
+        bottom:0;
+        content:"";
+        position:absolute;
+        right:-20px;
+        top:0;
+        width:20px
     }
     .match:after{
-        display:none
+        background:#1a1a1a;
+        content:"";
+        height:2px;
+        position:absolute;
+        right:-20px;
+        top:50%;
+        width:20px
+    }
+    .bracket-section{
+        overflow-x:auto
     }
 }
 

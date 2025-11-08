@@ -1,0 +1,159 @@
+.pin-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.pin-modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 0;
+  max-width: 400px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.pin-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.pin-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.pin-modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.pin-modal-close:hover {
+  color: #333;
+}
+
+.pin-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pin-modal-body {
+  padding: 20px;
+}
+
+.pin-modal-message {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.pin-input-group {
+  margin-bottom: 20px;
+}
+
+.pin-input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.pin-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  font-size: 1.2rem;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  font-family: monospace;
+  box-sizing: border-box;
+}
+
+.pin-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.pin-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.pin-error-message {
+  color: #d32f2f;
+  font-size: 0.875rem;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  padding: 8px;
+  background-color: #ffebee;
+  border-radius: 4px;
+}
+
+.pin-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.pin-modal-cancel,
+.pin-modal-confirm {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pin-modal-cancel {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.pin-modal-cancel:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+.pin-modal-confirm {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.pin-modal-confirm:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.pin-modal-confirm:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.pin-modal-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

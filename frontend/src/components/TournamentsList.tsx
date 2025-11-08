@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './TournamentsList.css';
+import PINModal from './PINModal';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 interface Team {
   id: string;
   name: string;
   players: string[];
+  weight: number; // Weight/seed for tournament bracket (1-5, lower = higher seed, max 1 decimal)
 }
 
 interface Match {
@@ -16,6 +18,8 @@ interface Match {
   team1: Team | null;
   team2: Team | null;
   winner: Team | null;
+  courtNumber?: string;
+  matchTime?: string;
 }
 
 interface Tournament {
@@ -26,6 +30,7 @@ interface Tournament {
   teams: Team[];
   matches: Match[];
   status: 'active' | 'completed' | 'upcoming';
+  pin?: string; // 4-digit PIN code (optional for backward compatibility)
 }
 
 interface TournamentsListProps {
@@ -39,11 +44,19 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
   const [collapsedYears, setCollapsedYears] = useState<{ [key: string]: boolean }>({});
   const [collapsedMonths, setCollapsedMonths] = useState<{ [key: string]: boolean }>({});
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', month: '', year: '' });
+  const [editForm, setEditForm] = useState({ name: '', month: '', year: '', newPin: '', confirmPin: '' });
+  const [pinError, setPinError] = useState('');
   const [isDeletingTournament, setIsDeletingTournament] = useState<string | null>(null);
   const [isUpdatingTournament, setIsUpdatingTournament] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showPINModal, setShowPINModal] = useState(false);
+  const [pinModalError, setPinModalError] = useState('');
+  const [pendingAction, setPendingAction] = useState<{
+    type: 'update' | 'delete';
+    tournamentId: string;
+    data?: { name: string; month: string; year: string };
+  } | null>(null);
 
   // Initialize collapsed state based on current date
   useEffect(() => {
@@ -152,32 +165,57 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     setEditForm({
       name: tournament.name,
       month: tournament.month,
-      year: tournament.year
+      year: tournament.year,
+      newPin: '',
+      confirmPin: ''
     });
+    setPinError('');
   };
 
   const handleDeleteClick = async (e: React.MouseEvent, tournamentId: string) => {
     e.stopPropagation();
+    const tournament = tournaments.find(t => t.id === tournamentId);
+    const hasExistingPin = tournament?.pin && tournament.pin.trim() !== '';
+    
     if (window.confirm('Are you sure you want to delete this tournament?')) {
-      try {
-        setIsDeletingTournament(tournamentId);
-        const response = await fetch(`${API_URL}/api/tournaments/${tournamentId}`, {
-          method: 'DELETE',
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to delete tournament');
+      // If tournament has PIN, require verification
+      if (hasExistingPin) {
+        setPendingAction({ type: 'delete', tournamentId });
+        setShowPINModal(true);
+        setPinModalError('');
+      } else {
+        // Tournament doesn't have PIN - allow direct delete
+        if (window.confirm('This tournament does not have a PIN. Are you absolutely sure you want to delete it?')) {
+          await handleDirectDelete(tournamentId);
         }
-
-        // Update tournaments state directly instead of reloading all tournaments
-        const updatedTournaments = tournaments.filter(t => t.id !== tournamentId);
-        onTournamentUpdate(updatedTournaments);
-      } catch (error) {
-        console.error('Error deleting tournament:', error);
-        alert('Failed to delete tournament. Please try again.');
-      } finally {
-        setIsDeletingTournament(null);
       }
+    }
+  };
+
+  const handleDirectDelete = async (tournamentId: string) => {
+    try {
+      setIsDeletingTournament(tournamentId);
+      const response = await fetch(`${API_URL}/api/tournaments/${tournamentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete tournament');
+      }
+
+      // Update tournaments state directly instead of reloading all tournaments
+      const updatedTournaments = tournaments.filter(t => t.id !== tournamentId);
+      onTournamentUpdate(updatedTournaments);
+    } catch (error) {
+      console.error('Error deleting tournament:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete tournament');
+    } finally {
+      setIsDeletingTournament(null);
     }
   };
 
@@ -185,18 +223,63 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     e.preventDefault();
     if (!editingTournament) return;
 
+    const hasExistingPin = editingTournament.pin && editingTournament.pin.trim() !== '';
+    const hasNewPin = editForm.newPin && editForm.newPin.trim() !== '';
+
+    // Validate new PIN if provided
+    if (hasNewPin) {
+      const pinRegex = /^\d{4}$/;
+      if (!pinRegex.test(editForm.newPin.trim())) {
+        setPinError('PIN must be exactly 4 digits');
+        return;
+      }
+      if (editForm.newPin !== editForm.confirmPin) {
+        setPinError('PIN codes do not match');
+        return;
+      }
+    }
+
+    // If tournament has existing PIN, require PIN verification via modal
+    if (hasExistingPin) {
+      setPendingAction({
+        type: 'update',
+        tournamentId: editingTournament.id,
+        data: editForm
+      });
+      setShowPINModal(true);
+      setPinModalError('');
+    } else {
+      // Tournament doesn't have PIN - allow direct update, optionally set new PIN
+      await handleDirectUpdate(editForm, hasNewPin ? editForm.newPin : undefined);
+    }
+  };
+
+  const handleDirectUpdate = async (formData: typeof editForm, newPin?: string) => {
+    if (!editingTournament) return;
+
     try {
       setIsUpdatingTournament(editingTournament.id);
+      const updateData: any = {
+        name: formData.name,
+        month: formData.month,
+        year: formData.year
+      };
+
+      if (newPin) {
+        updateData.newPin = newPin;
+      }
+
       const response = await fetch(`${API_URL}/api/tournaments/${editingTournament.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(updateData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update tournament');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update tournament');
       }
 
       const updatedTournament = await response.json();
@@ -207,12 +290,116 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
       );
       onTournamentUpdate(updatedTournaments);
       setEditingTournament(null);
+      setPinError('');
     } catch (error) {
       console.error('Error updating tournament:', error);
-      alert('Failed to update tournament. Please try again.');
+      setPinError(error instanceof Error ? error.message : 'Failed to update tournament');
     } finally {
       setIsUpdatingTournament(null);
     }
+  };
+
+  const handlePINConfirm = async (pin: string) => {
+    if (!pendingAction) return;
+
+    setPinModalError('');
+    
+    // Super PIN "9999" bypasses all tournament PINs
+    const SUPER_PIN = '9999';
+    const trimmedPin = pin.trim();
+    const isSuperPin = trimmedPin === SUPER_PIN;
+    
+    console.log(`PIN confirmation: pin="${pin}", trimmedPin="${trimmedPin}", isSuperPin=${isSuperPin}`);
+    
+    if (isSuperPin) {
+      console.log(`Super PIN used to ${pendingAction.type === 'update' ? 'update' : 'delete'} tournament`);
+    }
+    
+    try {
+      if (pendingAction.type === 'update') {
+        setIsUpdatingTournament(pendingAction.tournamentId);
+        
+        const requestBody = {
+          ...pendingAction.data,
+          pin: trimmedPin // Ensure PIN is trimmed
+        };
+        
+        console.log('Update tournament request body:', requestBody);
+        
+        const response = await fetch(`${API_URL}/api/tournaments/${pendingAction.tournamentId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          if (response.status === 401) {
+            setPinModalError(errorData.error || 'Invalid PIN code');
+            setIsUpdatingTournament(null);
+            return; // Stop execution - don't update tournament
+          }
+          setIsUpdatingTournament(null);
+          throw new Error(errorData.error || 'Failed to update tournament');
+        }
+
+        const updatedTournament = await response.json();
+        
+        // Update tournaments state directly instead of reloading all tournaments
+        const updatedTournaments = tournaments.map(t => 
+          t.id === updatedTournament.id ? updatedTournament : t
+        );
+        onTournamentUpdate(updatedTournaments);
+        setEditingTournament(null);
+        setShowPINModal(false);
+        setPendingAction(null);
+        setPinError('');
+      } else if (pendingAction.type === 'delete') {
+        setIsDeletingTournament(pendingAction.tournamentId);
+        
+        const requestBody = { pin: trimmedPin };
+        console.log('Delete tournament request body:', requestBody);
+        
+        const response = await fetch(`${API_URL}/api/tournaments/${pendingAction.tournamentId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          if (response.status === 401) {
+            setPinModalError(errorData.error || 'Invalid PIN code');
+            setIsDeletingTournament(null);
+            return; // Stop execution - don't delete tournament
+          }
+          setIsDeletingTournament(null);
+          throw new Error(errorData.error || 'Failed to delete tournament');
+        }
+
+        // Update tournaments state directly instead of reloading all tournaments
+        const updatedTournaments = tournaments.filter(t => t.id !== pendingAction.tournamentId);
+        onTournamentUpdate(updatedTournaments);
+        setShowPINModal(false);
+        setPendingAction(null);
+      }
+    } catch (error) {
+      console.error(`Error ${pendingAction.type === 'update' ? 'updating' : 'deleting'} tournament:`, error);
+      setPinModalError(error instanceof Error ? error.message : `Failed to ${pendingAction.type === 'update' ? 'update' : 'delete'} tournament`);
+    } finally {
+      setIsUpdatingTournament(null);
+      setIsDeletingTournament(null);
+    }
+  };
+
+  const handlePINModalClose = () => {
+    setShowPINModal(false);
+    setPendingAction(null);
+    setPinModalError('');
   };
 
   const handleEditCancel = () => {
@@ -358,6 +545,55 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
                                     max="2100"
                                     disabled={isUpdatingTournament === tournament.id}
                                   />
+                                  {(!tournament.pin || tournament.pin.trim() === '') && (
+                                    <>
+                                      <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+                                        <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#666' }}>
+                                          This tournament doesn't have a PIN. Set a PIN to secure it (optional):
+                                        </p>
+                                        <input
+                                          type="password"
+                                          value={editForm.newPin}
+                                          onChange={e => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                            setEditForm(prev => ({ ...prev, newPin: value }));
+                                            if (value.length === 4 && value !== editForm.confirmPin) {
+                                              setPinError('PIN codes do not match');
+                                            } else {
+                                              setPinError('');
+                                            }
+                                          }}
+                                          placeholder="Enter 4-digit PIN (optional)"
+                                          maxLength={4}
+                                          pattern="\d{4}"
+                                          disabled={isUpdatingTournament === tournament.id}
+                                        />
+                                        <input
+                                          type="password"
+                                          value={editForm.confirmPin}
+                                          onChange={e => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                            setEditForm(prev => ({ ...prev, confirmPin: value }));
+                                            if (editForm.newPin && value !== editForm.newPin) {
+                                              setPinError('PIN codes do not match');
+                                            } else {
+                                              setPinError('');
+                                            }
+                                          }}
+                                          placeholder="Confirm PIN"
+                                          maxLength={4}
+                                          pattern="\d{4}"
+                                          disabled={isUpdatingTournament === tournament.id}
+                                          style={{ marginTop: '8px' }}
+                                        />
+                                        {pinError && (
+                                          <div style={{ color: 'red', fontSize: '0.875rem', marginTop: '8px' }}>
+                                            {pinError}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
                                   <div className="edit-actions">
                                     <button type="submit" className="save-button" disabled={isUpdatingTournament === tournament.id}>
                                       {isUpdatingTournament === tournament.id ? (
@@ -437,6 +673,17 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
           ))}
         </div>
       )}
+      <PINModal
+        isOpen={showPINModal}
+        onClose={handlePINModalClose}
+        onConfirm={handlePINConfirm}
+        title={pendingAction?.type === 'update' ? 'Enter PIN to Update Tournament' : 'Enter PIN to Delete Tournament'}
+        message={pendingAction?.type === 'update' 
+          ? 'Please enter the PIN code to update this tournament'
+          : 'Please enter the PIN code to delete this tournament. This action cannot be undone.'}
+        error={pinModalError}
+        isLoading={isUpdatingTournament !== null || isDeletingTournament !== null}
+      />
     </div>
   );
 };

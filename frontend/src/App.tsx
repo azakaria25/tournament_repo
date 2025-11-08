@@ -11,6 +11,7 @@ interface Team {
   id: string;
   name: string;
   players: string[];
+  weight: number; // Weight/seed for tournament bracket (1-5, lower = higher seed, max 1 decimal)
 }
 
 interface Match {
@@ -20,6 +21,8 @@ interface Match {
   team2: Team | null;
   winner: Team | null;
   matchIndex: number;
+  courtNumber?: string;
+  matchTime?: string;
 }
 
 interface Tournament {
@@ -30,6 +33,7 @@ interface Tournament {
   teams: Team[];
   matches: Match[];
   status: 'active' | 'completed' | 'upcoming';
+  pin?: string; // 4-digit PIN code (optional for backward compatibility)
 }
 
 function App() {
@@ -87,7 +91,7 @@ function App() {
     }
   };
 
-  const handleTournamentSetup = async (name: string, month: string, year: string) => {
+  const handleTournamentSetup = async (name: string, month: string, year: string, pin: string) => {
     try {
       setIsCreatingTournament(true);
       console.log('Creating tournament with:', { name, month, year });
@@ -96,7 +100,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, month, year }),
+        body: JSON.stringify({ name, month, year, pin }),
       });
 
       if (!response.ok) {
@@ -136,10 +140,10 @@ function App() {
       <header className="header">
         <div className="header-content">
           <div className="logo-container">
-            <img src="https://www.thiqah.sa/media/qv0drq0w/logo.png" alt="THIQAH Logo" className="logo" />
+            <img src="/tournament-logo.svg" alt="Tournament Logo" className="logo" />
           </div>
           <div className="header-text">
-            <h1>THIQAH Tournament Management</h1>
+            <h1>Tournament Management</h1>
           </div>
         </div>
       </header>

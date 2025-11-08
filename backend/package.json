@@ -4,7 +4,7 @@
   "description": "Padel Tournament Backend",
   "main": "api/index.ts",
   "scripts": {
-    "start": "node api/index.ts",
+    "start": "ts-node api/index.ts",
     "dev": "nodemon api/index.ts",
     "build": "tsc",
     "vercel-build": "npm install && npm run build"

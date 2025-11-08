@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { Team, Match, Tournament } from '../src/types';
+import { Team, Match, Tournament, TournamentDetails } from '../src/types';
 import { DatabaseService } from '../src/services/database';
 import path from 'path';
 
@@ -30,6 +30,7 @@ app.use(cors({
   origin: [
     'https://thiqah-padel-tournament.vercel.app',
     'http://localhost:3000',
+    'http://localhost:3025',
     'https://tournament-repo-frontend.vercel.app',
     'https://tournament-repo.vercel.app'
   ],
@@ -105,27 +106,31 @@ const getTournamentDetails = async (id: string) => {
   return await databaseService.getTournamentDetails(id);
 };
 
-interface TournamentDetails {
-  id: string;
-  name: string;
-  month: string;
-  year: string;
-  teams: Team[];
-  matches: Match[];
-  status: 'active' | 'completed' | 'upcoming';
-}
-
 // Routes
 app.get('/api/teams', async (req, res) => {
   res.json(await getTeams());
 });
 
 app.post('/api/teams', async (req, res) => {
-  const { name, players } = req.body;
+  const { name, players, weight } = req.body;
+  
+  // Validate weight
+  if (!weight || typeof weight !== 'number' || weight < 1 || weight > 5) {
+    return res.status(400).json({ error: 'Weight is required and must be between 1 and 5' });
+  }
+  
+  // Validate decimal places (max 1 digit after decimal)
+  const weightStr = weight.toString();
+  const decimalParts = weightStr.split('.');
+  if (decimalParts.length > 1 && decimalParts[1].length > 1) {
+    return res.status(400).json({ error: 'Weight can have maximum one digit after decimal point' });
+  }
+  
   const newTeam: Team = {
     id: Date.now().toString(),
     name,
     players,
+    weight: weight,
   };
   
   if (USE_IN_MEMORY_STORAGE) {
@@ -140,7 +145,19 @@ app.post('/api/teams', async (req, res) => {
 
 app.put('/api/teams/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, players } = req.body;
+  const { name, players, weight } = req.body;
+  
+  // Validate weight
+  if (!weight || typeof weight !== 'number' || weight < 1 || weight > 5) {
+    return res.status(400).json({ error: 'Weight is required and must be between 1 and 5' });
+  }
+  
+  // Validate decimal places (max 1 digit after decimal)
+  const weightStr = weight.toString();
+  const decimalParts = weightStr.split('.');
+  if (decimalParts.length > 1 && decimalParts[1].length > 1) {
+    return res.status(400).json({ error: 'Weight can have maximum one digit after decimal point' });
+  }
   
   if (USE_IN_MEMORY_STORAGE) {
     const teams = await getTeams();
@@ -154,6 +171,7 @@ app.put('/api/teams/:id', async (req, res) => {
       ...teams[teamIndex],
       name,
       players,
+      weight: weight,
     };
 
     // Update team in any existing matches
@@ -176,6 +194,7 @@ app.put('/api/teams/:id', async (req, res) => {
       id,
       name,
       players,
+      weight: weight,
     };
     await databaseService.updateTeam(updatedTeam);
     res.json(updatedTeam);
@@ -230,13 +249,15 @@ app.delete('/api/teams/:id', async (req, res) => {
           // Update tournament status to active
           await databaseService.updateTournament({
             ...tournamentDetails,
-            status: 'active'
+            status: 'active',
+            pin: tournamentDetails.pin || ''
           });
         } else {
           // If not enough teams, update status to upcoming
           await databaseService.updateTournament({
             ...tournamentDetails,
-            status: 'upcoming'
+            status: 'upcoming',
+            pin: tournamentDetails.pin || ''
           });
         }
       }
@@ -281,7 +302,10 @@ app.post('/api/tournaments/:id/start', async (req, res) => {
       }
     } else {
       // Update tournament status first
-      await databaseService.updateTournament(tournament);
+      await databaseService.updateTournament({
+        ...tournament,
+        pin: tournament.pin || ''
+      });
       
       // Then create all matches
       for (const match of matches) {
@@ -367,7 +391,10 @@ app.post('/api/matches/:matchId/winner', async (req, res) => {
         tournaments[tournamentIndex].status = 'completed';
       }
     } else {
-      await databaseService.updateTournament(tournament);
+      await databaseService.updateTournament({
+        ...tournament,
+        pin: tournament.pin || ''
+      });
     }
   }
 
@@ -379,6 +406,48 @@ app.post('/api/matches/:matchId/winner', async (req, res) => {
   }
 
   res.json(tournament.matches);
+});
+
+app.put('/api/matches/:matchId', async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const { courtNumber, matchTime, tournamentId } = req.body;
+
+    console.log('Updating match:', { matchId, tournamentId, courtNumber, matchTime });
+
+    if (!tournamentId) {
+      return res.status(400).json({ error: 'Tournament ID is required' });
+    }
+
+    const tournament = await getTournamentDetails(tournamentId);
+    if (!tournament) {
+      console.error(`Tournament not found: ${tournamentId}`);
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    console.log(`Tournament found with ${tournament.matches.length} matches`);
+    const match = tournament.matches.find(m => m.id === matchId);
+    if (!match) {
+      console.error(`Match not found: ${matchId} in tournament ${tournamentId}`);
+      console.error(`Available matches:`, tournament.matches.map(m => ({ id: m.id, round: m.round, matchIndex: m.matchIndex })));
+      return res.status(404).json({ error: 'Match not found' });
+    }
+
+    console.log('Match found, updating...');
+    // Update match with court number and time
+    match.courtNumber = courtNumber && courtNumber.trim() !== '' ? courtNumber.trim() : undefined;
+    match.matchTime = matchTime && matchTime.trim() !== '' ? matchTime.trim() : undefined;
+
+    if (!USE_IN_MEMORY_STORAGE) {
+      await databaseService.updateMatch(match);
+      console.log('Match updated in database');
+    }
+
+    res.json(match);
+  } catch (error) {
+    console.error('Error updating match:', error);
+    res.status(500).json({ error: 'Internal server error while updating match' });
+  }
 });
 
 app.post('/api/teams/clear', async (req, res) => {
@@ -407,9 +476,19 @@ app.get('/api/tournaments', async (req, res) => {
 });
 
 app.post('/api/tournaments', async (req, res) => {
-  const { name, month, year } = req.body;
+  const { name, month, year, pin } = req.body;
   if (!name || !month || !year) {
     return res.status(400).json({ error: 'Name, month, and year are required' });
+  }
+  
+  // Validate PIN: must be exactly 4 digits
+  if (!pin) {
+    return res.status(400).json({ error: 'PIN code is required' });
+  }
+  
+  const pinRegex = /^\d{4}$/;
+  if (!pinRegex.test(pin)) {
+    return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
   }
 
   const newTournament: Tournament = {
@@ -419,7 +498,8 @@ app.post('/api/tournaments', async (req, res) => {
     year,
     teams: [],
     matches: [],
-    status: 'upcoming'
+    status: 'upcoming',
+    pin: pin
   };
 
   if (USE_IN_MEMORY_STORAGE) {
@@ -554,13 +634,15 @@ app.delete('/api/tournaments/:id/teams/:teamId', async (req, res) => {
         // Update tournament status to active
         await databaseService.updateTournament({
           ...updatedTournament,
-          status: 'active'
+          status: 'active',
+          pin: updatedTournament.pin || ''
         });
       } else if (updatedTournament) {
         // If not enough teams, update status to upcoming
         await databaseService.updateTournament({
           ...updatedTournament,
-          status: 'upcoming'
+          status: 'upcoming',
+          pin: updatedTournament.pin || ''
         });
       }
     }
@@ -595,7 +677,11 @@ app.put('/api/tournaments/:id/status', async (req, res) => {
         tournaments[tournamentIndex].status = status;
       }
     } else {
-      await databaseService.updateTournament({ ...tournament, status });
+      await databaseService.updateTournament({ 
+        ...tournament, 
+        status,
+        pin: tournament.pin || ''
+      });
     }
     
     res.json(tournament);
@@ -609,8 +695,19 @@ function createMatches(teams: Team[], tournamentId: string): Match[] {
   // Calculate number of rounds needed
   const numTeams = teams.length;
   const numRounds = Math.ceil(Math.log2(numTeams));
-  // Shuffle teams for random seeding
-  const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
+  
+  // Professional bracket seeding: Sort teams by weight (lower weight = higher seed)
+  // Teams without weight are treated as lowest priority
+  const sortedTeams = [...teams].sort((a, b) => {
+    const weightA = a.weight ?? 9999; // Teams without weight go to the end
+    const weightB = b.weight ?? 9999;
+    return weightA - weightB; // Lower weight = higher seed
+  });
+  
+  // Professional bracket seeding algorithm
+  // Top seed plays bottom seed, 2nd plays 2nd-to-last, etc.
+  const seededTeams = seedBracket(sortedTeams);
+  
   // Create first round matches
   const firstRoundMatches = Math.ceil(numTeams / 2);
   for (let i = 0; i < firstRoundMatches; i++) {
@@ -618,8 +715,8 @@ function createMatches(teams: Team[], tournamentId: string): Match[] {
       id: `${tournamentId}-match-1-${i}`,
       round: 1,
       matchIndex: i,
-      team1: shuffledTeams[i * 2],
-      team2: shuffledTeams[i * 2 + 1] || null,
+      team1: seededTeams[i * 2],
+      team2: seededTeams[i * 2 + 1] || null,
       winner: null,
       tournamentId
     });
@@ -642,6 +739,24 @@ function createMatches(teams: Team[], tournamentId: string): Match[] {
     currentMatchIndex += matchesInRound;
   }
   return matches;
+}
+
+// Professional bracket seeding: Top seed plays bottom seed
+function seedBracket(teams: Team[]): Team[] {
+  const seeded: Team[] = [];
+  const numTeams = teams.length;
+  
+  // For professional bracket seeding:
+  // Seed 1 plays Seed N, Seed 2 plays Seed N-1, etc.
+  for (let i = 0; i < Math.ceil(numTeams / 2); i++) {
+    const topSeed = teams[i];
+    const bottomSeed = teams[numTeams - 1 - i];
+    
+    if (topSeed) seeded.push(topSeed);
+    if (bottomSeed && bottomSeed.id !== topSeed?.id) seeded.push(bottomSeed);
+  }
+  
+  return seeded;
 }
 
 app.post('/api/tournaments/update-statuses', async (req, res) => {
@@ -676,39 +791,147 @@ app.post('/api/tournaments/update-statuses', async (req, res) => {
       }
     }
     tournament.status = newStatus;
-    await databaseService.updateTournament(tournament);
+    await databaseService.updateTournament({
+      ...tournament,
+      pin: tournament.pin || ''
+    });
   }
   res.json(tournaments);
 });
 
 app.put('/api/tournaments/:id', async (req, res) => {
   const tournamentId = req.params.id;
-  const { name, month, year } = req.body;
+  const { name, month, year, pin, newPin } = req.body;
+  
+  console.log('Update tournament request:', { tournamentId, pin, pinType: typeof pin, pinValue: pin });
+  
   if (!name || !month || !year) {
     return res.status(400).json({ error: 'Name, month, and year are required' });
   }
+  
+  const tournament = await getTournamentDetails(tournamentId);
+  if (!tournament) {
+    return res.status(404).json({ error: 'Tournament not found' });
+  }
+  
+  const tournamentPin = (tournament.pin || '').trim();
+  const hasExistingPin = tournamentPin && tournamentPin !== '';
+  
+  // If tournament has an existing PIN, require PIN verification
+  if (hasExistingPin) {
+    // Convert pin to string (handles both string and number types)
+    const pinString = pin ? String(pin).trim() : '';
+    if (!pinString || pinString === '') {
+      return res.status(400).json({ error: 'PIN code is required to update tournament' });
+    }
+    
+    const providedPin = pinString;
+    const pinRegex = /^\d{4}$/;
+    
+    if (!pinRegex.test(providedPin)) {
+      return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
+    }
+    
+    // Super PIN "9999" bypasses all tournament PINs
+    const SUPER_PIN = '9999';
+    console.log(`PIN verification: providedPin="${providedPin}", SUPER_PIN="${SUPER_PIN}", tournamentPin="${tournamentPin}"`);
+    
+    if (providedPin === SUPER_PIN) {
+      console.log(`Super PIN used to bypass PIN for tournament ${tournamentId}`);
+      // Super PIN bypasses - continue with update
+    } else if (tournamentPin !== providedPin) {
+      console.log(`PIN verification failed for tournament ${tournamentId}: expected "${tournamentPin}", got "${providedPin}"`);
+      return res.status(401).json({ error: 'Invalid PIN code' });
+    }
+  }
+  
+  // Handle new PIN setting (for old tournaments without PIN)
+  let finalPin = tournamentPin;
+  if (newPin && typeof newPin === 'string' && newPin.trim() !== '') {
+    const newPinValue = newPin.trim();
+    const pinRegex = /^\d{4}$/;
+    
+    if (!pinRegex.test(newPinValue)) {
+      return res.status(400).json({ error: 'New PIN must be exactly 4 digits' });
+    }
+    
+    // If tournament already has PIN, require verification before changing it
+    // Super PIN "9999" bypasses this requirement
+    const SUPER_PIN = '9999';
+    if (hasExistingPin) {
+      // Convert pin to string if it's a number
+      const pinString = pin ? String(pin).trim() : '';
+      const providedPin = pinString;
+      if (!pinString || (providedPin !== SUPER_PIN && tournamentPin !== providedPin)) {
+        return res.status(401).json({ error: 'Must verify existing PIN before changing it' });
+      }
+    }
+    
+    finalPin = newPinValue;
+  }
+  
   const tournaments = await getTournaments();
   const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
   if (tournamentIndex === -1) {
     return res.status(404).json({ error: 'Tournament not found' });
   }
-  const tournament = await getTournamentDetails(tournamentId);
-  if (!tournament) {
-    return res.status(404).json({ error: 'Tournament details not found' });
-  }
+  
   tournaments[tournamentIndex] = {
     ...tournaments[tournamentIndex],
     name,
     month,
-    year
+    year,
+    pin: finalPin
   };
-  Object.assign(tournament, { name, month, year });
-  await databaseService.updateTournament({ ...tournament, name, month, year });
+  Object.assign(tournament, { name, month, year, pin: finalPin });
+  await databaseService.updateTournament({ 
+    ...tournament, 
+    name, 
+    month, 
+    year,
+    pin: finalPin
+  });
   res.json(tournament);
 });
 
 app.delete('/api/tournaments/:id', async (req, res) => {
   const tournamentId = req.params.id;
+  const { pin } = req.body;
+  
+  const tournament = await getTournamentDetails(tournamentId);
+  if (!tournament) {
+    return res.status(404).json({ error: 'Tournament not found' });
+  }
+  
+  const tournamentPin = (tournament.pin || '').trim();
+  const hasExistingPin = tournamentPin && tournamentPin !== '';
+  
+  // If tournament has an existing PIN, require PIN verification
+  if (hasExistingPin) {
+    // Convert pin to string (handles both string and number types)
+    const pinString = pin ? String(pin).trim() : '';
+    if (!pinString || pinString === '') {
+      return res.status(400).json({ error: 'PIN code is required to delete tournament' });
+    }
+    
+    const providedPin = pinString;
+    const pinRegex = /^\d{4}$/;
+    
+    if (!pinRegex.test(providedPin)) {
+      return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
+    }
+    
+    // Super PIN "9999" bypasses all tournament PINs
+    const SUPER_PIN = '9999';
+    if (providedPin === SUPER_PIN) {
+      console.log(`Super PIN used to bypass PIN for tournament ${tournamentId}`);
+    } else if (tournamentPin !== providedPin) {
+      console.log(`PIN verification failed for tournament ${tournamentId}: expected "${tournamentPin}", got "${providedPin}"`);
+      return res.status(401).json({ error: 'Invalid PIN code' });
+    }
+  }
+  // If tournament doesn't have PIN, allow deletion without PIN verification
+  
   const tournaments = await getTournaments();
   const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
   if (tournamentIndex === -1) {

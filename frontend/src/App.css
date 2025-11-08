@@ -48,7 +48,7 @@ h1 {
 }
 
 .logo-container {
-  width: 180px;
+  width: 350px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -62,13 +62,13 @@ h1 {
 }
 
 .logo-container:hover {
-  transform: scale(1.02);
+  transform: scale(1.05);
 }
 
 .logo {
   width: 100%;
   height: auto;
-  filter: none;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
   object-fit: contain;
 }
 
@@ -83,8 +83,10 @@ h1 {
   margin: 0;
   text-align: left;
   color: #0056b3;
-  font-size: 1.8rem;
-  font-weight: 600;
+  font-size: 2rem;
+  font-weight: 700;
+  display: block;
+  visibility: visible;
 }
 
 /* Common button styles */
@@ -116,7 +118,7 @@ input {
   }
 
   .logo-container {
-    width: 150px;
+    width: 280px;
     margin: 0 auto;
   }
 
@@ -200,11 +202,11 @@ input {
 }
 
 .logo {
-  height: 60px;
+  height: 120px;
   width: auto;
   object-fit: contain;
   display: block;
-  filter: none;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .header-text {
@@ -685,7 +687,8 @@ input.required::placeholder {
   }
 
   .logo {
-    height: 50px;
+    height: 100px;
+    filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
   }
 
   .App-header h1 {
@@ -699,37 +702,52 @@ input.required::placeholder {
   }
 
   .bracket {
-    flex-direction: column;
-    align-items: center;
-    padding: 10px;
-    gap: 30px;
+    flex-direction: row;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: visible;
+    align-items: stretch;
+    padding: 20px;
+    gap: 60px;
   }
 
   .round {
-    margin: 10px 0;
-    min-width: 280px;
+    margin: 0 20px;
+    min-width: 220px;
+    flex-shrink: 0;
   }
 
   .round:not(:last-child)::after {
-    right: 50%;
-    top: 100%;
-    width: 2px;
-    height: 30px;
-    border: none;
+    border-bottom: 2px solid #0056b3;
     border-right: 2px solid #0056b3;
+    border-top: 2px solid #0056b3;
+    bottom: 0;
+    content: "";
+    position: absolute;
+    right: -30px;
+    top: 0;
+    width: 20px;
+    height: auto;
   }
 
   .match::after {
-    display: none;
+    background: #0056b3;
+    content: "";
+    height: 2px;
+    position: absolute;
+    right: -30px;
+    top: 50%;
+    width: 20px;
+    display: block;
   }
 
   .match:first-child::before,
   .match:last-child::before {
-    display: none;
+    display: block;
   }
 
   .team {
-    min-width: 250px;
+    min-width: 200px;
   }
 
   .tournament-info {

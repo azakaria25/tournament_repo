@@ -1,0 +1,227 @@
+.role-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.role-modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.role-modal-header {
+  padding: 24px;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.role-modal-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.75rem;
+  color: #333;
+}
+
+.tournament-name {
+  margin: 0;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.role-modal-body {
+  padding: 24px;
+}
+
+.role-selection {
+  text-align: center;
+}
+
+.role-description {
+  margin: 0 0 24px 0;
+  color: #666;
+  font-size: 1rem;
+}
+
+.role-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.role-button {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+}
+
+.role-button:hover {
+  border-color: #4CAF50;
+  background-color: #f5f5f5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.role-button.admin-button:hover {
+  border-color: #2196F3;
+}
+
+.role-icon {
+  font-size: 2.5rem;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.role-info {
+  flex: 1;
+}
+
+.role-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.role-info p {
+  margin: 0 0 8px 0;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.pin-required {
+  display: inline-block;
+  padding: 4px 8px;
+  background-color: #ff9800;
+  color: white;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.no-pin-required {
+  display: inline-block;
+  padding: 4px 8px;
+  background-color: #4CAF50;
+  color: white;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pin-verification {
+  text-align: center;
+}
+
+.pin-description {
+  margin: 0 0 24px 0;
+  color: #666;
+  font-size: 1rem;
+}
+
+.pin-input-group {
+  margin-bottom: 20px;
+}
+
+.pin-input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.pin-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  font-size: 1.2rem;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  font-family: monospace;
+  box-sizing: border-box;
+}
+
+.pin-input:focus {
+  outline: none;
+  border-color: #2196F3;
+}
+
+.pin-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.pin-error-message {
+  color: #d32f2f;
+  font-size: 0.875rem;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  padding: 8px;
+  background-color: #ffebee;
+  border-radius: 4px;
+}
+
+.pin-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.pin-modal-cancel,
+.pin-modal-confirm {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pin-modal-cancel {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.pin-modal-cancel:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+.pin-modal-confirm {
+  background-color: #2196F3;
+  color: white;
+}
+
+.pin-modal-confirm:hover:not(:disabled) {
+  background-color: #1976D2;
+}
+
+.pin-modal-confirm:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.pin-modal-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

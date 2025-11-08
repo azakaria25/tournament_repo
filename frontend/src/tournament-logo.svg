@@ -1,0 +1,29 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield Background -->
+  <path d="M 100 20 L 160 40 L 160 120 L 100 160 L 40 120 L 40 40 Z" fill="none" stroke="#000000" stroke-width="4"/>
+  
+  <!-- Trophy Cup -->
+  <g transform="translate(100, 80)">
+    <!-- Trophy Base -->
+    <rect x="-20" y="35" width="40" height="8" fill="#FFD700" stroke="#000000" stroke-width="2" rx="2"/>
+    
+    <!-- Trophy Stem -->
+    <rect x="-4" y="20" width="8" height="15" fill="#FFD700" stroke="#000000" stroke-width="2"/>
+    
+    <!-- Trophy Bowl -->
+    <ellipse cx="0" cy="10" rx="18" ry="12" fill="#FFD700" stroke="#000000" stroke-width="2"/>
+    <ellipse cx="0" cy="10" rx="15" ry="9" fill="#FFA500" opacity="0.3"/>
+    
+    <!-- Trophy Handles -->
+    <path d="M -18 8 Q -25 5 -25 0 Q -25 -5 -18 -2" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M -18 8 Q -25 5 -25 0 Q -25 -5 -18 -2" fill="#FFD700" stroke="#000000" stroke-width="2"/>
+    
+    <path d="M 18 8 Q 25 5 25 0 Q 25 -5 18 -2" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M 18 8 Q 25 5 25 0 Q 25 -5 18 -2" fill="#FFD700" stroke="#000000" stroke-width="2"/>
+  </g>
+  
+  <!-- Text Banner -->
+  <rect x="20" y="140" width="160" height="35" fill="#000000" rx="3"/>
+  <text x="100" y="163" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#FFFFFF" text-anchor="middle" stroke="#000000" stroke-width="0.5">TOURNAMENT</text>
+</svg>
+

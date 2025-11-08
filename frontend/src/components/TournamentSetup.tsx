@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './TournamentSetup.css';
 
 interface TournamentSetupProps {
-  onSubmit: (name: string, month: string, year: string) => void;
+  onSubmit: (name: string, month: string, year: string, pin: string) => void;
   onBack: () => void;
   isSubmitting?: boolean;
 }
@@ -30,11 +30,54 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({ onSubmit, onBack, isS
   const [name, setName] = useState('');
   const [month, setMonth] = useState(currentMonth);
   const [year, setYear] = useState(currentYear.toString());
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinError, setPinError] = useState('');
+
+  const validatePin = (pinValue: string): boolean => {
+    // PIN must be exactly 4 digits
+    const pinRegex = /^\d{4}$/;
+    return pinRegex.test(pinValue);
+  };
+
+  const handlePinChange = (value: string) => {
+    // Only allow digits and limit to 4 characters
+    const digitsOnly = value.replace(/\D/g, '').slice(0, 4);
+    setPin(digitsOnly);
+    if (confirmPin && digitsOnly !== confirmPin) {
+      setPinError('PIN codes do not match');
+    } else {
+      setPinError('');
+    }
+  };
+
+  const handleConfirmPinChange = (value: string) => {
+    // Only allow digits and limit to 4 characters
+    const digitsOnly = value.replace(/\D/g, '').slice(0, 4);
+    setConfirmPin(digitsOnly);
+    if (pin && digitsOnly !== pin) {
+      setPinError('PIN codes do not match');
+    } else {
+      setPinError('');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && month && year) {
-      onSubmit(name.trim(), month, year);
+    
+    // Validate PIN
+    if (!validatePin(pin)) {
+      setPinError('PIN must be exactly 4 digits');
+      return;
+    }
+    
+    if (pin !== confirmPin) {
+      setPinError('PIN codes do not match');
+      return;
+    }
+    
+    if (name.trim() && month && year && pin) {
+      onSubmit(name.trim(), month, year, pin);
     }
   };
 
@@ -93,6 +136,37 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({ onSubmit, onBack, isS
               ))}
             </select>
           </div>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="tournament-pin">PIN Code (4 digits)</label>
+          <input
+            type="password"
+            id="tournament-pin"
+            value={pin}
+            onChange={(e) => handlePinChange(e.target.value)}
+            placeholder="Enter 4-digit PIN"
+            maxLength={4}
+            required
+            pattern="\d{4}"
+            title="PIN must be exactly 4 digits"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="tournament-confirm-pin">Confirm PIN Code</label>
+          <input
+            type="password"
+            id="tournament-confirm-pin"
+            value={confirmPin}
+            onChange={(e) => handleConfirmPinChange(e.target.value)}
+            placeholder="Re-enter 4-digit PIN"
+            maxLength={4}
+            required
+            pattern="\d{4}"
+            title="PIN must be exactly 4 digits"
+          />
+          {pinError && <span className="error-message" style={{ color: 'red', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>{pinError}</span>}
         </div>
 
         <div className="form-actions">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './TournamentManagement.css';
+import RoleSelectionModal from './RoleSelectionModal';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -7,6 +8,7 @@ interface Team {
   id: string;
   name: string;
   players: string[];
+  weight: number; // Weight/seed for tournament bracket (1-5, lower = higher seed, max 1 decimal)
 }
 
 interface Match {
@@ -16,6 +18,8 @@ interface Match {
   team2: Team | null;
   winner: Team | null;
   matchIndex: number;
+  courtNumber?: string;
+  matchTime?: string;
 }
 
 interface Tournament {
@@ -25,6 +29,7 @@ interface Tournament {
   teams: Team[];
   matches: Match[];
   status: 'active' | 'completed' | 'upcoming';
+  pin?: string; // 4-digit PIN code (optional for backward compatibility)
 }
 
 interface TournamentManagementProps {
@@ -32,10 +37,15 @@ interface TournamentManagementProps {
   onBack: () => void;
 }
 
+type UserRole = 'admin' | 'viewer' | null;
+
 const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament, onBack }) => {
+  const [userRole, setUserRole] = useState<UserRole>(null);
+  const [showRoleModal, setShowRoleModal] = useState(true);
+  const [pinError, setPinError] = useState('');
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [newTeam, setNewTeam] = useState({ name: '', players: ['', ''] });
+  const [newTeam, setNewTeam] = useState({ name: '', players: ['', ''], weight: '' });
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [isTeamSectionVisible, setIsTeamSectionVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +54,8 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   const [isDeletingTeam, setIsDeletingTeam] = useState<string | null>(null);
   const [isStartingTournament, setIsStartingTournament] = useState(false);
   const [isUpdatingWinner, setIsUpdatingWinner] = useState<string | null>(null);
+  const [editingMatch, setEditingMatch] = useState<string | null>(null);
+  const [matchEditForm, setMatchEditForm] = useState({ courtNumber: '', matchTime: '' });
 
   const fetchTournamentDetails = useCallback(async () => {
     setIsLoading(true);
@@ -72,8 +84,119 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   }, [tournament.id]);
 
   useEffect(() => {
-    fetchTournamentDetails();
-  }, [fetchTournamentDetails]);
+    if (userRole) {
+      fetchTournamentDetails();
+    }
+  }, [userRole, fetchTournamentDetails]);
+
+  const handleRoleSelect = async (role: 'admin' | 'viewer', pin?: string) => {
+    if (role === 'admin' && tournament.pin && tournament.pin.trim() !== '') {
+      // Verify PIN for admin access
+      if (!pin || pin.length !== 4) {
+        setPinError('PIN must be exactly 4 digits');
+        return;
+      }
+
+      // Verify PIN with backend
+      try {
+        const response = await fetch(`${API_URL}/api/tournaments/${tournament.id}`, {
+          method: 'GET',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to verify tournament access');
+        }
+
+        const tournamentData = await response.json();
+        const tournamentPin = (tournamentData.pin || '').trim();
+        const providedPin = (pin || '').trim();
+
+        // Super PIN "9999" bypasses all tournament PINs
+        const SUPER_PIN = '9999';
+        if (providedPin !== SUPER_PIN && tournamentPin !== providedPin) {
+          setPinError('Invalid PIN code');
+          return;
+        }
+
+        // PIN verified successfully
+        setUserRole('admin');
+        setShowRoleModal(false);
+        setPinError('');
+      } catch (error) {
+        console.error('Error verifying PIN:', error);
+        setPinError('Failed to verify PIN. Please try again.');
+      }
+    } else {
+      // Viewer role or admin without PIN - no verification needed
+      setUserRole(role);
+      setShowRoleModal(false);
+      setPinError('');
+    }
+  };
+
+  const isAdmin = userRole === 'admin';
+  const isViewer = userRole === 'viewer';
+  const hasAccess = userRole !== null;
+
+  const formatTime = (time: string): string => {
+    // If time is in HH:MM format, convert to 12-hour format
+    if (time && time.includes(':')) {
+      const [hours, minutes] = time.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${minutes} ${ampm}`;
+    }
+    return time;
+  };
+
+  const handleUpdateMatchDetails = async (matchId: string) => {
+    try {
+      console.log('Updating match details:', { matchId, tournamentId: tournament.id, courtNumber: matchEditForm.courtNumber, matchTime: matchEditForm.matchTime });
+      
+      // Express automatically decodes URL parameters, so we don't need to encode
+      const url = `${API_URL}/api/matches/${matchId}`;
+      const body = JSON.stringify({
+        courtNumber: matchEditForm.courtNumber.trim() || null,
+        matchTime: matchEditForm.matchTime.trim() || null,
+        tournamentId: tournament.id
+      });
+      
+      console.log('Sending request to:', url);
+      console.log('Request body:', body);
+      
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: body,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to update match details' }));
+        const errorMessage = errorData.error || `HTTP error! status: ${response.status}`;
+        console.error('Error response:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const updatedMatch = await response.json();
+      
+      // Update matches state
+      setMatches(prevMatches => prevMatches.map(m => 
+        m.id === updatedMatch.id 
+          ? { ...m, courtNumber: updatedMatch.courtNumber, matchTime: updatedMatch.matchTime }
+          : m
+      ));
+      
+      setEditingMatch(null);
+      setMatchEditForm({ courtNumber: '', matchTime: '' });
+    } catch (error) {
+      console.error('Error updating match details:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update match details. Please try again.';
+      alert(errorMessage);
+    }
+  };
 
   const handleAddTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +204,26 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
       alert('Please enter a team name');
       return;
     }
+    
+    // Validate weight
+    if (!newTeam.weight.trim()) {
+      alert('Please enter a weight (1-5)');
+      return;
+    }
+    
+    const weightValue = parseFloat(newTeam.weight);
+    if (isNaN(weightValue) || weightValue < 1 || weightValue > 5) {
+      alert('Weight must be between 1 and 5');
+      return;
+    }
+    
+    // Validate decimal places (max 1 digit after decimal)
+    const decimalParts = newTeam.weight.split('.');
+    if (decimalParts.length > 1 && decimalParts[1].length > 1) {
+      alert('Weight can have maximum one digit after decimal point');
+      return;
+    }
+    
     setIsAddingTeam(true);
     const validPlayers = newTeam.players.filter(player => player.trim() !== '');
     try {
@@ -91,7 +234,8 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
         },
         body: JSON.stringify({
           name: newTeam.name.trim(),
-          players: validPlayers
+          players: validPlayers,
+          weight: weightValue
         }),
       });
 
@@ -119,7 +263,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
 
       // Update teams state directly instead of reloading all teams
       setTeams(prevTeams => [...prevTeams, createdTeam]);
-      setNewTeam({ name: '', players: ['', ''] });
+      setNewTeam({ name: '', players: ['', ''], weight: '' });
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to add team. Please try again.');
     } finally {
@@ -130,6 +274,18 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   const startTournament = async () => {
     if (teams.length < 2) {
       alert('Please register at least 2 teams to start the tournament');
+      return;
+    }
+
+    // Check if tournament has been started before (has existing matches)
+    const hasExistingMatches = matches.length > 0;
+    
+    let confirmMessage = 'Are you sure you want to start the tournament?';
+    if (hasExistingMatches) {
+      confirmMessage = 'This tournament has already been started. Starting again will shuffle the teams and create new matches. All existing match results will be cleared. Are you sure you want to proceed?';
+    }
+
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
@@ -159,6 +315,31 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   };
 
   const setWinner = async (matchId: string, winnerId: string) => {
+    // Find the match to check if it already has a winner
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return;
+
+    // Check if match already has a winner
+    if (match.winner) {
+      const currentWinner = match.winner;
+      const newWinner = match.team1?.id === winnerId ? match.team1 : match.team2;
+      
+      if (currentWinner.id === winnerId) {
+        // Same winner selected, no need to change
+        return;
+      }
+
+      if (!newWinner) {
+        return;
+      }
+
+      const confirmMessage = `This match already has a winner: ${currentWinner.name}. Are you sure you want to change it to ${newWinner.name}?`;
+      
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+    }
+
     setIsUpdatingWinner(matchId);
     try {
       const response = await fetch(`${API_URL}/api/matches/${matchId}/winner`, {
@@ -189,7 +370,15 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   };
 
   const handleDeleteTeam = async (teamId: string) => {
-    if (!window.confirm('Are you sure you want to delete this team?')) {
+    const teamToDelete = teams.find(t => t.id === teamId);
+    const hasStartedTournament = matches.length > 0;
+    
+    let confirmMessage = 'Are you sure you want to delete this team?';
+    if (hasStartedTournament) {
+      confirmMessage = `This tournament has already started. Deleting "${teamToDelete?.name || 'this team'}" will automatically restart the tournament with the remaining teams. All existing match results will be cleared. Are you sure you want to proceed?`;
+    }
+
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
@@ -210,17 +399,35 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
       }
 
       // Update teams state directly instead of reloading all teams
-      setTeams(prevTeams => prevTeams.filter(team => team.id !== teamId));
+      const updatedTeams = teams.filter(team => team.id !== teamId);
+      setTeams(updatedTeams);
       
-      // If there are matches, we need to update them as well
-      if (matches.length > 0) {
-        const updatedMatches = matches.map(match => ({
-          ...match,
-          team1: match.team1?.id === teamId ? null : match.team1,
-          team2: match.team2?.id === teamId ? null : match.team2,
-          winner: match.winner?.id === teamId ? null : match.winner
-        }));
-        setMatches(updatedMatches);
+      // If tournament has started, automatically restart it with remaining teams
+      if (hasStartedTournament && updatedTeams.length >= 2) {
+        try {
+          const startResponse = await fetch(`${API_URL}/api/tournaments/${tournament.id}/start`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+
+          if (!startResponse.ok) {
+            const errorData = await startResponse.json();
+            throw new Error(errorData.error || 'Failed to restart tournament');
+          }
+
+          const tournamentData = await startResponse.json();
+          setMatches(tournamentData.matches);
+          setIsTeamSectionVisible(false);
+        } catch (error) {
+          console.error('Error restarting tournament:', error);
+          alert('Team deleted successfully, but failed to restart tournament. Please start it manually.');
+        }
+      } else if (hasStartedTournament && updatedTeams.length < 2) {
+        // Not enough teams to restart, clear matches
+        setMatches([]);
+        alert('Team deleted. Tournament needs at least 2 teams to start. Please add more teams.');
       }
     } catch (error) {
       console.error('Error deleting team:', error);
@@ -234,6 +441,12 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
     e.preventDefault();
     if (!editingTeam) return;
 
+    // Validate weight
+    if (!editingTeam.weight || editingTeam.weight < 1 || editingTeam.weight > 5) {
+      alert('Weight must be between 1 and 5');
+      return;
+    }
+
     setIsUpdatingTeam(true);
     try {
       const response = await fetch(`${API_URL}/api/teams/${editingTeam.id}`, {
@@ -243,7 +456,8 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
         },
         body: JSON.stringify({
           name: editingTeam.name,
-          players: editingTeam.players
+          players: editingTeam.players,
+          weight: editingTeam.weight
         }),
       });
 
@@ -258,6 +472,24 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
       setTeams(prevTeams => prevTeams.map(team => 
         team.id === updatedTeam.id ? updatedTeam : team
       ));
+      
+      // If tournament has started, update team names in matches to reflect changes
+      if (matches.length > 0) {
+        const updatedMatches = matches.map(match => ({
+          ...match,
+          team1: match.team1?.id === updatedTeam.id 
+            ? { ...match.team1, id: updatedTeam.id, name: updatedTeam.name, players: updatedTeam.players, weight: updatedTeam.weight } as Team
+            : match.team1,
+          team2: match.team2?.id === updatedTeam.id 
+            ? { ...match.team2, id: updatedTeam.id, name: updatedTeam.name, players: updatedTeam.players, weight: updatedTeam.weight } as Team
+            : match.team2,
+          winner: match.winner?.id === updatedTeam.id 
+            ? { ...match.winner, id: updatedTeam.id, name: updatedTeam.name, players: updatedTeam.players, weight: updatedTeam.weight } as Team
+            : match.winner
+        }));
+        setMatches(updatedMatches);
+      }
+      
       setEditingTeam(null);
     } catch (error) {
       console.error('Error updating team:', error);
@@ -327,25 +559,88 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
               return (
                 <div key={match.id} className={`match ${isFinalMatch ? 'final-match' : ''}`}>
                   <div 
-                    className={`team ${isTeam1Winner ? 'winner' : ''} ${isUpdatingTeam1 ? 'updating' : ''} ${isChampion && isTeam1Winner ? 'champion' : ''}`}
-                    onClick={() => match.team1 && !isUpdatingWinner && setWinner(match.id, match.team1.id)}
+                    className={`team ${isTeam1Winner ? 'winner' : ''} ${isUpdatingTeam1 ? 'updating' : ''} ${isChampion && isTeam1Winner ? 'champion' : ''} ${!isAdmin ? 'viewer-mode' : ''}`}
+                    onClick={() => isAdmin && match.team1 && !isUpdatingWinner && setWinner(match.id, match.team1.id)}
+                    title={!isAdmin ? 'Viewer mode: Cannot select winner' : ''}
                   >
                     {isUpdatingTeam1 ? (
                       <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
                     ) : (
-                      match.team1 ? match.team1.name : 'TBD'
+                      match.team1 ? (
+                        <>
+                          <span className="team-seed">#{match.team1.weight ?? 5}</span>
+                          {match.team1.name}
+                        </>
+                      ) : 'TBD'
                     )}
                   </div>
                   <div 
-                    className={`team ${isTeam2Winner ? 'winner' : ''} ${isUpdatingTeam2 ? 'updating' : ''} ${isChampion && isTeam2Winner ? 'champion' : ''}`}
-                    onClick={() => match.team2 && !isUpdatingWinner && setWinner(match.id, match.team2.id)}
+                    className={`team ${isTeam2Winner ? 'winner' : ''} ${isUpdatingTeam2 ? 'updating' : ''} ${isChampion && isTeam2Winner ? 'champion' : ''} ${!isAdmin ? 'viewer-mode' : ''}`}
+                    onClick={() => isAdmin && match.team2 && !isUpdatingWinner && setWinner(match.id, match.team2.id)}
+                    title={!isAdmin ? 'Viewer mode: Cannot select winner' : ''}
                   >
                     {isUpdatingTeam2 ? (
                       <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
                     ) : (
-                      match.team2 ? match.team2.name : 'TBD'
+                      match.team2 ? (
+                        <>
+                          <span className="team-seed">#{match.team2.weight ?? 5}</span>
+                          {match.team2.name}
+                        </>
+                      ) : 'TBD'
                     )}
                   </div>
+                  {editingMatch === match.id ? (
+                    <div className="match-details-edit" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        placeholder="Court #"
+                        value={matchEditForm.courtNumber}
+                        onChange={(e) => setMatchEditForm(prev => ({ ...prev, courtNumber: e.target.value }))}
+                        style={{ width: '60px', padding: '4px', fontSize: '12px' }}
+                      />
+                      <input
+                        type="time"
+                        value={matchEditForm.matchTime}
+                        onChange={(e) => setMatchEditForm(prev => ({ ...prev, matchTime: e.target.value }))}
+                        style={{ width: '80px', padding: '4px', fontSize: '12px', marginLeft: '4px' }}
+                      />
+                      <button
+                        onClick={() => handleUpdateMatchDetails(match.id)}
+                        style={{ padding: '4px 8px', fontSize: '11px', marginLeft: '4px' }}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingMatch(null);
+                          setMatchEditForm({ courtNumber: '', matchTime: '' });
+                        }}
+                        style={{ padding: '4px 8px', fontSize: '11px', marginLeft: '2px' }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="match-details" onClick={(e) => {
+                      e.stopPropagation();
+                      if (isAdmin) {
+                        setEditingMatch(match.id);
+                        setMatchEditForm({
+                          courtNumber: match.courtNumber || '',
+                          matchTime: match.matchTime || ''
+                        });
+                      }
+                    }}>
+                      {match.courtNumber && <span className="court-number">Court {match.courtNumber}</span>}
+                      {match.matchTime && <span className="match-time">{formatTime(match.matchTime)}</span>}
+                      {!match.courtNumber && !match.matchTime && isAdmin && (
+                        <span className="add-details-hint" style={{ fontSize: '11px', color: '#999', cursor: 'pointer' }}>
+                          Click to add
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -355,8 +650,17 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
     );
   };
 
+  const hasPin = tournament.pin && tournament.pin.trim() !== '';
+
   return (
     <div className="tournament-management">
+      <RoleSelectionModal
+        isOpen={showRoleModal}
+        onRoleSelect={handleRoleSelect}
+        tournamentName={tournament.name}
+        hasPin={hasPin || false}
+        pinError={pinError}
+      />
       {isLoading && (
         <div className="loading-overlay">
           <div className="loading">
@@ -370,10 +674,15 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
         <div className="tournament-info">
           <h2>{tournament.name}</h2>
           <p>Month: {tournament.month}</p>
+          {hasAccess && (
+            <span className={`role-badge ${isAdmin ? 'admin' : 'viewer'}`}>
+              {isAdmin ? '🔐 Admin' : '👁️ Viewer'}
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="content">
+      <div className={`content ${!hasAccess ? 'blurred' : ''}`}>
         <div className={`teams-section ${!isTeamSectionVisible ? 'slide-out' : ''}`}>
           <h2>Team Management</h2>
           {editingTeam ? (
@@ -385,7 +694,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                 onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
                 required
                 minLength={2}
-                disabled={isUpdatingTeam}
+                disabled={isUpdatingTeam || !isAdmin}
               />
               <div className="players-container">
                 {editingTeam.players.map((player, index) => (
@@ -425,6 +734,24 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                   + Add Player
                 </button>
               )}
+              <input
+                type="number"
+                placeholder="Weight/Seed (1-5, required)"
+                value={editingTeam.weight || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow empty, numbers, and one decimal point with max 1 digit after
+                  if (value === '' || /^\d+(\.\d?)?$/.test(value)) {
+                    setEditingTeam({ ...editingTeam, weight: value ? parseFloat(value) : (editingTeam.weight || 5) });
+                  }
+                }}
+                min="1"
+                max="5"
+                step="0.1"
+                required
+                disabled={isUpdatingTeam || !isAdmin}
+                style={{ marginTop: '10px' }}
+              />
               <div className="edit-actions">
                 <button type="submit" disabled={isUpdatingTeam}>
                   {isUpdatingTeam ? 'Saving...' : 'Save Changes'}
@@ -443,7 +770,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                 onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
                 required
                 minLength={2}
-                disabled={isAddingTeam}
+                disabled={isAddingTeam || !isAdmin}
               />
               <div className="players-container">
                 {newTeam.players.map((player, index) => (
@@ -483,9 +810,32 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
                   + Add Player
                 </button>
               )}
-              <button type="submit" disabled={isAddingTeam}>
+              <input
+                type="number"
+                placeholder="Weight/Seed (1-5, required)"
+                value={newTeam.weight}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow empty, numbers, and one decimal point with max 1 digit after
+                  if (value === '' || /^\d+(\.\d?)?$/.test(value)) {
+                    setNewTeam({ ...newTeam, weight: value });
+                  }
+                }}
+                min="1"
+                max="5"
+                step="0.1"
+                required
+                disabled={isAddingTeam || !isAdmin}
+                style={{ marginTop: '10px' }}
+              />
+              <button type="submit" disabled={isAddingTeam || !isAdmin}>
                 {isAddingTeam ? 'Registering Team...' : 'Register Team'}
               </button>
+              {!isAdmin && (
+                <p className="viewer-notice" style={{ color: '#666', fontSize: '0.9rem', marginTop: '10px' }}>
+                  Viewer mode: You can only view teams. Admin access required to create teams.
+                </p>
+              )}
             </form>
           )}
 
@@ -493,54 +843,68 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
             {teams.map(team => (
               <div key={team.id} className="team-card">
                 <div className="team-header">
-                  <h3>{team.name}</h3>
-                  <div className="team-actions">
-                    <button
-                      className="edit-button"
-                      onClick={() => setEditingTeam(team)}
-                      title="Edit Team"
-                      disabled={isDeletingTeam === team.id || isUpdatingTeam}
-                    >
-                      {isUpdatingTeam && editingTeam?.id === team.id ? (
-                        <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
-                      ) : (
-                        '✎'
-                      )}
-                    </button>
-                    <button
-                      className="delete-button"
-                      onClick={() => handleDeleteTeam(team.id)}
-                      title="Delete Team"
-                      disabled={isDeletingTeam === team.id || isUpdatingTeam}
-                    >
-                      {isDeletingTeam === team.id ? (
-                        <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
-                      ) : (
-                        '×'
-                      )}
-                    </button>
-                  </div>
+                  <h3>
+                    <span className="team-seed">#{team.weight ?? 5}</span>
+                    {team.name}
+                  </h3>
+                  {isAdmin && (
+                    <div className="team-actions">
+                      <button
+                        className="edit-button"
+                        onClick={() => setEditingTeam(team)}
+                        title="Edit Team"
+                        disabled={isDeletingTeam === team.id || isUpdatingTeam}
+                      >
+                        {isUpdatingTeam && editingTeam?.id === team.id ? (
+                          <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
+                        ) : (
+                          '✎'
+                        )}
+                      </button>
+                      <button
+                        className="delete-button"
+                        onClick={() => handleDeleteTeam(team.id)}
+                        title="Delete Team"
+                        disabled={isDeletingTeam === team.id || isUpdatingTeam}
+                      >
+                        {isDeletingTeam === team.id ? (
+                          <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
+                        ) : (
+                          '×'
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <p>{team.players.join(' & ')}</p>
               </div>
             ))}
           </div>
 
-          <div className="teams-controls">
-            <button 
-              onClick={startTournament} 
-              disabled={teams.length < 2 || isStartingTournament}
-            >
-              {isStartingTournament ? (
-                <>
-                  <div className="loading-spinner" style={{ width: '20px', height: '20px', marginRight: '8px' }} />
-                  Starting Tournament...
-                </>
-              ) : (
-                'Start Tournament'
-              )}
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="teams-controls">
+              <button 
+                onClick={startTournament} 
+                disabled={teams.length < 2 || isStartingTournament}
+              >
+                {isStartingTournament ? (
+                  <>
+                    <div className="loading-spinner" style={{ width: '20px', height: '20px', marginRight: '8px' }} />
+                    Starting Tournament...
+                  </>
+                ) : (
+                  'Start Tournament'
+                )}
+              </button>
+            </div>
+          )}
+          {isViewer && (
+            <div className="teams-controls">
+              <p className="viewer-notice" style={{ color: '#666', fontSize: '0.9rem' }}>
+                Viewer mode: You can only view teams. Admin access required to start tournament.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className={`bracket-section ${!isTeamSectionVisible ? 'expand' : ''}`}>
