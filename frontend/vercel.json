@@ -31,8 +31,8 @@
       "dest": "/logo512.png"
     },
     {
-      "src": "/tournament-logo.svg",
-      "dest": "/tournament-logo.svg"
+      "src": "/tournament-logo.png",
+      "dest": "/tournament-logo.png"
     },
     {
       "src": "/(.*)",

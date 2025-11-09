@@ -1,29 +1,86 @@
-<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <!-- Shield Background -->
-  <path d="M 100 20 L 160 40 L 160 120 L 100 160 L 40 120 L 40 40 Z" fill="none" stroke="#000000" stroke-width="4"/>
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Black Background -->
+  <rect width="300" height="300" fill="#000000"/>
   
-  <!-- Trophy Cup -->
-  <g transform="translate(100, 80)">
-    <!-- Trophy Base -->
-    <rect x="-20" y="35" width="40" height="8" fill="#FFD700" stroke="#000000" stroke-width="2" rx="2"/>
+  <!-- Dark Grey Shield with thick outline -->
+  <path d="M 150 40 L 240 80 L 240 200 L 150 260 L 60 200 L 60 80 Z" 
+        fill="#000000" 
+        stroke="#36454F" 
+        stroke-width="8" 
+        stroke-linejoin="round"/>
+  
+  <!-- Trophy Group -->
+  <g transform="translate(150, 130)">
+    <!-- Trophy Base/Pedestal -->
+    <rect x="-30" y="50" width="60" height="12" 
+          fill="#D4AF37" 
+          stroke="#1a1a1a" 
+          stroke-width="2" 
+          rx="2"/>
+    <!-- Base highlight -->
+    <rect x="-25" y="50" width="50" height="4" 
+          fill="#F4D03F" 
+          opacity="0.6"/>
+    <!-- Base shadow -->
+    <rect x="-25" y="58" width="50" height="4" 
+          fill="#B8860B" 
+          opacity="0.5"/>
     
     <!-- Trophy Stem -->
-    <rect x="-4" y="20" width="8" height="15" fill="#FFD700" stroke="#000000" stroke-width="2"/>
+    <rect x="-6" y="30" width="12" height="20" 
+          fill="#D4AF37" 
+          stroke="#1a1a1a" 
+          stroke-width="2"/>
+    <!-- Stem highlight -->
+    <rect x="-4" y="30" width="8" height="8" 
+          fill="#F4D03F" 
+          opacity="0.5"/>
     
-    <!-- Trophy Bowl -->
-    <ellipse cx="0" cy="10" rx="18" ry="12" fill="#FFD700" stroke="#000000" stroke-width="2"/>
-    <ellipse cx="0" cy="10" rx="15" ry="9" fill="#FFA500" opacity="0.3"/>
+    <!-- Trophy Cup - Main Body -->
+    <ellipse cx="0" cy="15" rx="28" ry="18" 
+             fill="#D4AF37" 
+             stroke="#1a1a1a" 
+             stroke-width="2.5"/>
+    <!-- Cup highlight (upper left) -->
+    <ellipse cx="-8" cy="10" rx="12" ry="8" 
+             fill="#F4D03F" 
+             opacity="0.7"/>
+    <!-- Cup shadow (lower right) -->
+    <ellipse cx="8" cy="20" rx="18" ry="12" 
+             fill="#B8860B" 
+             opacity="0.6"/>
     
-    <!-- Trophy Handles -->
-    <path d="M -18 8 Q -25 5 -25 0 Q -25 -5 -18 -2" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M -18 8 Q -25 5 -25 0 Q -25 -5 -18 -2" fill="#FFD700" stroke="#000000" stroke-width="2"/>
+    <!-- Left Handle -->
+    <path d="M -28 12 Q -38 8 -38 0 Q -38 -8 -28 -4" 
+          fill="#D4AF37" 
+          stroke="#1a1a1a" 
+          stroke-width="2.5" 
+          stroke-linecap="round"/>
+    <!-- Left handle highlight -->
+    <path d="M -28 12 Q -35 9 -35 0 Q -35 -6 -28 -3" 
+          fill="#F4D03F" 
+          opacity="0.5"/>
     
-    <path d="M 18 8 Q 25 5 25 0 Q 25 -5 18 -2" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M 18 8 Q 25 5 25 0 Q 25 -5 18 -2" fill="#FFD700" stroke="#000000" stroke-width="2"/>
+    <!-- Right Handle -->
+    <path d="M 28 12 Q 38 8 38 0 Q 38 -8 28 -4" 
+          fill="#D4AF37" 
+          stroke="#1a1a1a" 
+          stroke-width="2.5" 
+          stroke-linecap="round"/>
+    <!-- Right handle highlight -->
+    <path d="M 28 12 Q 35 9 35 0 Q 35 -6 28 -3" 
+          fill="#F4D03F" 
+          opacity="0.5"/>
   </g>
   
-  <!-- Text Banner -->
-  <rect x="20" y="140" width="160" height="35" fill="#000000" rx="3"/>
-  <text x="100" y="163" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#FFFFFF" text-anchor="middle" stroke="#000000" stroke-width="0.5">TOURNAMENT</text>
+  <!-- TOURNAMENT Text -->
+  <text x="150" y="235" 
+        font-family="Arial, sans-serif" 
+        font-size="32" 
+        font-weight="bold" 
+        fill="#FFFFFF" 
+        text-anchor="middle" 
+        stroke="#1a1a1a" 
+        stroke-width="2" 
+        paint-order="stroke fill">TOURNAMENT</text>
 </svg>
-

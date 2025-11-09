@@ -140,7 +140,7 @@ function App() {
       <header className="header">
         <div className="header-content">
           <div className="logo-container">
-            <img src="/tournament-logo.svg" alt="Tournament Logo" className="logo" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <img src="/tournament-logo.png" alt="Tournament Logo" className="logo" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           </div>
           <div className="header-text">
             <h1>Tournament Management</h1>
