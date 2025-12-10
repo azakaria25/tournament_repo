@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './TournamentsList.css';
 import PINModal from './PINModal';
@@ -57,6 +57,30 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
     tournamentId?: string;
     data?: { name: string; month: string; year: string };
   } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredTournaments = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return tournaments;
+    }
+
+    return tournaments.filter(tournament => {
+      const name = tournament.name?.toLowerCase() ?? '';
+      const month = tournament.month?.toLowerCase() ?? '';
+      const year = tournament.year?.toLowerCase() ?? '';
+      const status = tournament.status?.toLowerCase() ?? '';
+      const teams = (tournament.teams ?? []).map(team => team.name?.toLowerCase()).filter(Boolean);
+
+      return (
+        name.includes(query) ||
+        month.includes(query) ||
+        year.includes(query) ||
+        status.includes(query) ||
+        teams.some(teamName => teamName?.includes(query))
+      );
+    });
+  }, [searchQuery, tournaments]);
 
   // Initialize collapsed state based on current date
   useEffect(() => {
@@ -133,7 +157,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
   };
 
   // Group tournaments by year and month
-  const groupedTournaments = tournaments.reduce((groups, tournament) => {
+  const groupedTournaments = filteredTournaments.reduce((groups, tournament) => {
     if (!tournament || !tournament.year || !tournament.month) return groups;
     
     const year = tournament.year;
@@ -463,24 +487,47 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
           <p className="tournaments-subtitle">Manage and track your tournaments</p>
         </div>
         <div className="header-actions">
-          <button 
-            onClick={handleDeleteAllTournaments} 
-            className="delete-all-button"
-            disabled={isDeletingAll || isLoading}
-          >
-            {isDeletingAll ? (
-              <>
-                <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
-                Deleting...
-              </>
-            ) : (
-              'Delete All Tournaments'
+          <div className="search-container">
+            <span className="search-icon" aria-hidden="true">🔍</span>
+            <input
+              type="search"
+              className="search-input"
+              placeholder="Search tournaments..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search tournaments"
+            />
+            {searchQuery.trim() !== '' && (
+              <button
+                type="button"
+                className="search-clear-button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+              >
+                ×
+              </button>
             )}
-          </button>
-          <button onClick={onCreateNew} className="create-tournament-button" disabled={isLoading}>
-            <span className="button-icon">+</span>
-            Create New Tournament
-          </button>
+          </div>
+          <div className="action-buttons">
+            <button 
+              onClick={handleDeleteAllTournaments} 
+              className="delete-all-button"
+              disabled={isDeletingAll || isLoading}
+            >
+              {isDeletingAll ? (
+                <>
+                  <div className="loading-spinner" style={{ width: '20px', height: '20px' }} />
+                  Deleting...
+                </>
+              ) : (
+                'Delete All Tournaments'
+              )}
+            </button>
+            <button onClick={onCreateNew} className="create-tournament-button" disabled={isLoading}>
+              <span className="button-icon">+</span>
+              Create New Tournament
+            </button>
+          </div>
         </div>
       </div>
 
@@ -495,6 +542,18 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
           <p>No tournaments found. Create your first tournament!</p>
           <button onClick={onCreateNew} className="create-tournament-button">
             Create New Tournament
+          </button>
+        </div>
+      ) : filteredTournaments.length === 0 ? (
+        <div className="no-tournaments search-empty">
+          <div className="empty-state-icon">🔍</div>
+          <p>No tournaments match your search.</p>
+          <button
+            type="button"
+            className="clear-search-button"
+            onClick={() => setSearchQuery('')}
+          >
+            Clear Search
           </button>
         </div>
       ) : (

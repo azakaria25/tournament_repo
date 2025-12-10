@@ -886,12 +886,37 @@ button:disabled {
 }
 
 .champion-box {
+  position: relative;
   background: linear-gradient(135deg, #ffd700, #ffa500);
   padding: 30px;
   border-radius: 15px;
   box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
   margin-bottom: 20px;
   animation: scaleIn 0.5s ease-out;
+}
+
+.champion-close-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.champion-close-button:hover,
+.champion-close-button:focus {
+  background: rgba(0, 0, 0, 0.35);
+  transform: scale(1.05);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
 }
 
 .champion-box h2 {

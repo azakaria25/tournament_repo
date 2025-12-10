@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './TournamentManagement.css';
 import RoleSelectionModal from './RoleSelectionModal';
 
@@ -56,6 +56,29 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   const [isUpdatingWinner, setIsUpdatingWinner] = useState<string | null>(null);
   const [editingMatch, setEditingMatch] = useState<string | null>(null);
   const [matchEditForm, setMatchEditForm] = useState({ courtNumber: '', matchTime: '' });
+  const champion = useMemo(() => {
+    if (matches.length === 0) {
+      return null;
+    }
+
+    const highestRound = matches.reduce((max, match) => Math.max(max, match.round), 0);
+    if (highestRound === 0) {
+      return null;
+    }
+
+    const finalMatch = matches.find(match => match.round === highestRound && match.winner);
+    return finalMatch?.winner ?? null;
+  }, [matches]);
+  const championId = champion?.id ?? null;
+  const [isChampionCelebrationVisible, setChampionCelebrationVisible] = useState(championId !== null);
+
+  useEffect(() => {
+    if (championId) {
+      setChampionCelebrationVisible(true);
+    } else {
+      setChampionCelebrationVisible(false);
+    }
+  }, [championId]);
 
   const fetchTournamentDetails = useCallback(async () => {
     setIsLoading(true);
@@ -526,14 +549,20 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
 
     // Check if tournament is completed
     const isCompleted = matches.every(m => m.winner);
-    const finalMatch = matches.find(m => m.round === sortedRounds.length);
-    const champion = finalMatch?.winner;
 
     return (
       <div className="bracket">
-        {isCompleted && champion && (
+        {isCompleted && champion && isChampionCelebrationVisible && (
           <div className="champion-celebration">
             <div className="champion-box">
+              <button
+                type="button"
+                className="champion-close-button"
+                onClick={() => setChampionCelebrationVisible(false)}
+                aria-label="Close champion celebration"
+              >
+                X
+              </button>
               <h2>🏆 Champion 🏆</h2>
               <div className="champion-name">{champion.name}</div>
               <div className="champion-players">{champion.players.join(' & ')}</div>

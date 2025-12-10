@@ -23,8 +23,83 @@
 
 .header-actions {
   display: flex;
-  gap: 12px;
+  flex-direction: row;
+  gap: 16px;
   align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f0f1f2;
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 44px;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+  flex: 1;
+  max-width: none;
+}
+
+.search-container:focus-within {
+  background: #e9ecef;
+  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2);
+}
+
+.search-icon {
+  font-size: 18px;
+  margin-right: 8px;
+  color: #666;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  color: #333;
+  outline: none;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: auto;
+}
+
+.action-buttons .delete-all-button,
+.action-buttons .create-tournament-button {
+  min-width: 0;
+  justify-content: center;
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+.search-clear-button {
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.search-clear-button:hover,
+.search-clear-button:focus {
+  color: #333;
+  transform: scale(1.1);
+  outline: none;
 }
 
 .tournaments-header h2 {
@@ -257,6 +332,13 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+.no-tournaments.search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
 .empty-state-icon {
   font-size: 48px;
   margin-bottom: 16px;
@@ -270,6 +352,25 @@
 
 .no-tournaments .create-tournament-button {
   margin: 0 auto;
+}
+
+.clear-search-button {
+  background-color: #ff9800;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.clear-search-button:hover,
+.clear-search-button:focus {
+  background-color: #f57c00;
+  transform: translateY(-1px);
+  outline: none;
 }
 
 .tournament-month {
@@ -486,6 +587,31 @@
   border: 3px solid rgba(0, 86, 179, 0.1);
   border-top-color: #0056b3;
   animation: spin 1s linear infinite;
+}
+
+@media (max-width: 768px) {
+  .header-actions {
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    max-width: none;
+  }
+
+  .create-tournament-button,
+  .delete-all-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .search-container {
+    max-width: none;
+  }
 }
 
 @keyframes spin {
