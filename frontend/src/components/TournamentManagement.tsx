@@ -117,30 +117,33 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   }, [userRole, fetchTournamentDetails]);
 
   const handleRoleSelect = async (role: 'admin' | 'viewer', pin?: string) => {
-    if (role === 'admin' && tournament.pin && tournament.pin.trim() !== '') {
+    const hasPin = tournament.hasPin ?? (tournament.pin && tournament.pin.trim() !== '');
+    
+    if (role === 'admin' && hasPin) {
       // Verify PIN for admin access
       if (!pin || pin.length !== 4) {
         setPinError('PIN must be exactly 4 digits');
         return;
       }
 
-      // Verify PIN with backend
+      // Verify PIN with backend using secure endpoint
       try {
-        const response = await fetch(`${API_URL}/api/tournaments/${tournament.id}`, {
-          method: 'GET',
+        const response = await fetch(`${API_URL}/api/tournaments/${tournament.id}/verify-pin`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ pin: pin.trim() }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to verify tournament access');
+          const errorData = await response.json();
+          setPinError(errorData.error || 'Invalid PIN code');
+          return;
         }
 
-        const tournamentData = await response.json();
-        const tournamentPin = (tournamentData.pin || '').trim();
-        const providedPin = (pin || '').trim();
-
-        // Super PIN "9999" bypasses all tournament PINs
-        const SUPER_PIN = '9999';
-        if (providedPin !== SUPER_PIN && tournamentPin !== providedPin) {
+        const verificationResult = await response.json();
+        if (!verificationResult.verified) {
           setPinError('Invalid PIN code');
           return;
         }
@@ -683,7 +686,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
     );
   };
 
-  const hasPin = tournament.pin && tournament.pin.trim() !== '';
+  const hasPin = tournament.hasPin ?? (tournament.pin && tournament.pin.trim() !== '');
 
   return (
     <div className="tournament-management">

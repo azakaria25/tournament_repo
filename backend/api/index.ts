@@ -320,7 +320,7 @@ app.post('/api/tournaments/:id/start', async (req, res) => {
       }
     }
 
-    res.json(tournament);
+    res.json(sanitizeTournamentDetails(tournament));
   } catch (error) {
     console.error('Error starting tournament:', error);
     res.status(500).json({ error: 'Failed to start tournament' });
@@ -471,8 +471,27 @@ app.post('/api/matches/clear', async (req, res) => {
 });
 
 // Tournament routes
+// Helper function to sanitize tournament objects (remove PIN, add hasPin)
+const sanitizeTournament = (tournament: Tournament) => {
+  const { pin, ...tournamentWithoutPin } = tournament;
+  return {
+    ...tournamentWithoutPin,
+    hasPin: pin ? pin.trim() !== '' : false
+  };
+};
+
+// Helper function to sanitize tournament details (remove PIN, add hasPin)
+const sanitizeTournamentDetails = (details: TournamentDetails) => {
+  const { pin, ...detailsWithoutPin } = details;
+  return {
+    ...detailsWithoutPin,
+    hasPin: pin ? pin.trim() !== '' : false
+  };
+};
+
 app.get('/api/tournaments', async (req, res) => {
-  res.json(await getTournaments());
+  const tournaments = await getTournaments();
+  res.json(tournaments.map(t => sanitizeTournament(t)));
 });
 
 app.post('/api/tournaments', async (req, res) => {
@@ -514,7 +533,7 @@ app.post('/api/tournaments', async (req, res) => {
     await databaseService.createTournament(newTournament);
   }
 
-  res.status(201).json(newTournament);
+  res.status(201).json(sanitizeTournament(newTournament));
 });
 
 app.get('/api/tournaments/:id', async (req, res) => {
@@ -525,7 +544,41 @@ app.get('/api/tournaments/:id', async (req, res) => {
     return res.status(404).json({ error: 'Tournament not found' });
   }
   
-  res.json(details);
+  res.json(sanitizeTournamentDetails(details));
+});
+
+// PIN verification endpoint
+app.post('/api/tournaments/:id/verify-pin', async (req, res) => {
+  const tournamentId = req.params.id;
+  const { pin } = req.body;
+  
+  if (!pin || typeof pin !== 'string') {
+    return res.status(400).json({ error: 'PIN is required' });
+  }
+  
+  const pinRegex = /^\d{4}$/;
+  const trimmedPin = pin.trim();
+  if (!pinRegex.test(trimmedPin)) {
+    return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
+  }
+  
+  const tournament = await getTournamentDetails(tournamentId);
+  if (!tournament) {
+    return res.status(404).json({ error: 'Tournament not found' });
+  }
+  
+  const tournamentPin = (tournament.pin || '').trim();
+  const hasExistingPin = tournamentPin && tournamentPin !== '';
+  
+  // Super PIN "9999" bypasses all tournament PINs
+  const SUPER_PIN = '9999';
+  const isValid = !hasExistingPin || trimmedPin === SUPER_PIN || tournamentPin === trimmedPin;
+  
+  if (isValid) {
+    res.json({ verified: true });
+  } else {
+    res.status(401).json({ verified: false, error: 'Invalid PIN code' });
+  }
 });
 
 app.get('/api/tournaments/:id/teams', async (req, res) => {
@@ -583,7 +636,7 @@ app.post('/api/tournaments/:id/teams', async (req, res) => {
     }
     
     const updatedTournament = await getTournamentDetails(tournamentId);
-    res.json(updatedTournament);
+    res.json(sanitizeTournamentDetails(updatedTournament!));
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -648,7 +701,7 @@ app.delete('/api/tournaments/:id/teams/:teamId', async (req, res) => {
     }
     
     const updatedTournament = await getTournamentDetails(tournamentId);
-    res.json(updatedTournament);
+    res.json(sanitizeTournamentDetails(updatedTournament!));
   } catch (error) {
     console.error('Error deleting team:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -684,7 +737,7 @@ app.put('/api/tournaments/:id/status', async (req, res) => {
       });
     }
     
-    res.json(tournament);
+    res.json(sanitizeTournamentDetails(tournament));
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -796,7 +849,7 @@ app.post('/api/tournaments/update-statuses', async (req, res) => {
       pin: tournament.pin || ''
     });
   }
-  res.json(tournaments);
+  res.json(tournaments.map(t => sanitizeTournament(t)));
 });
 
 app.put('/api/tournaments/:id', async (req, res) => {
@@ -891,7 +944,8 @@ app.put('/api/tournaments/:id', async (req, res) => {
     year,
     pin: finalPin
   });
-  res.json(tournament);
+  const updatedTournament = await getTournamentDetails(tournamentId);
+  res.json(sanitizeTournamentDetails(updatedTournament!));
 });
 
 app.delete('/api/tournaments/:id', async (req, res) => {

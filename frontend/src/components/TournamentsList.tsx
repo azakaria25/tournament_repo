@@ -30,7 +30,8 @@ interface Tournament {
   teams: Team[];
   matches: Match[];
   status: 'active' | 'completed' | 'upcoming';
-  pin?: string; // 4-digit PIN code (optional for backward compatibility)
+  hasPin?: boolean; // Whether tournament requires a PIN (PIN value never exposed to frontend)
+  pin?: string; // Deprecated: kept for backward compatibility, should use hasPin
 }
 
 interface TournamentsListProps {
@@ -199,7 +200,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
   const handleDeleteClick = async (e: React.MouseEvent, tournamentId: string) => {
     e.stopPropagation();
     const tournament = tournaments.find(t => t.id === tournamentId);
-    const hasExistingPin = tournament?.pin && tournament.pin.trim() !== '';
+    const hasExistingPin = tournament?.hasPin ?? (tournament?.pin && tournament.pin.trim() !== '');
     
     if (window.confirm('Are you sure you want to delete this tournament?')) {
       // If tournament has PIN, require verification
@@ -631,7 +632,7 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
                                     max="2100"
                                     disabled={isUpdatingTournament === tournament.id}
                                   />
-                                  {(!tournament.pin || tournament.pin.trim() === '') && (
+                                  {!(tournament.hasPin ?? (tournament.pin && tournament.pin.trim() !== '')) && (
                                     <>
                                       <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
                                         <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#666' }}>
