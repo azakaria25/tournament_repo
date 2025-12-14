@@ -80,6 +80,11 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
     }
   }, [championId]);
 
+  // Hide Team Management section by default if tournament bracket (matches) exists
+  useEffect(() => {
+    setIsTeamSectionVisible(matches.length === 0);
+  }, [matches]);
+
   const fetchTournamentDetails = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -97,7 +102,6 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
 
       setTeams(teamsData);
       setMatches(matchesData);
-      setIsTeamSectionVisible(true);
     } catch (error) {
       console.error('Error fetching tournament details:', error);
       alert('Failed to fetch tournament details. Please try again.');
