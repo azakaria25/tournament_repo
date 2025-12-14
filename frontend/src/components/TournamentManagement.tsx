@@ -26,10 +26,12 @@ interface Tournament {
   id: string;
   name: string;
   month: string;
+  year: string;
   teams: Team[];
   matches: Match[];
   status: 'active' | 'completed' | 'upcoming';
-  pin?: string; // 4-digit PIN code (optional for backward compatibility)
+  hasPin?: boolean; // Whether tournament requires a PIN (PIN value never exposed to frontend)
+  pin?: string; // Deprecated: kept for backward compatibility, should use hasPin
 }
 
 interface TournamentManagementProps {
