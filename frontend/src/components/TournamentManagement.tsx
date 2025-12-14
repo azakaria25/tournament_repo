@@ -87,8 +87,10 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
     setIsTeamSectionVisible(matches.length === 0);
   }, [matches]);
 
-  const fetchTournamentDetails = useCallback(async () => {
-    setIsLoading(true);
+  const fetchTournamentDetails = useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setIsLoading(true);
+    }
     try {
       const [teamsResponse, matchesResponse] = await Promise.all([
         fetch(`${API_URL}/api/tournaments/${tournament.id}/teams`),
@@ -106,16 +108,67 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
       setMatches(matchesData);
     } catch (error) {
       console.error('Error fetching tournament details:', error);
-      alert('Failed to fetch tournament details. Please try again.');
+      // Only show alert on initial load, not on polling updates
+      if (showLoading) {
+        alert('Failed to fetch tournament details. Please try again.');
+      }
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   }, [tournament.id]);
 
+  // Initial fetch when user role is set
   useEffect(() => {
     if (userRole) {
-      fetchTournamentDetails();
+      fetchTournamentDetails(true); // Show loading on initial fetch
     }
+  }, [userRole, fetchTournamentDetails]);
+
+  // Set up polling for real-time updates (every 3 seconds)
+  useEffect(() => {
+    if (!userRole) return; // Don't poll until user has selected a role
+
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      pollInterval = setInterval(() => {
+        // Only poll if page is visible (to save resources when tab is hidden)
+        if (!document.hidden) {
+          fetchTournamentDetails(false); // Silent update, no loading spinner
+        }
+      }, 3000); // Poll every 3 seconds
+    };
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
+    // Start polling
+    startPolling();
+
+    // Pause polling when page is hidden, resume when visible
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        // Refresh immediately when page becomes visible, then resume polling
+        fetchTournamentDetails(false);
+        startPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Clean up interval and event listener on unmount or when userRole changes
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [userRole, fetchTournamentDetails]);
 
   const handleRoleSelect = async (role: 'admin' | 'viewer', pin?: string) => {
