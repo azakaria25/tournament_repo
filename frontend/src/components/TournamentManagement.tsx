@@ -766,9 +766,13 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
           <h2>{tournament.name}</h2>
           <p>Month: {tournament.month}</p>
           {hasAccess && (
-            <span className={`role-badge ${isAdmin ? 'admin' : 'viewer'}`}>
+            <button 
+              className={`role-badge role-switch-button ${isAdmin ? 'admin' : 'viewer'}`}
+              onClick={() => setShowRoleModal(true)}
+              title={`Switch to ${isAdmin ? 'viewer' : 'admin'} mode`}
+            >
               {isAdmin ? '🔐 Admin' : '👁️ Viewer'}
-            </span>
+            </button>
           )}
         </div>
       </div>

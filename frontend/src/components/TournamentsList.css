@@ -7,7 +7,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 15px;
   padding: 20px;
   background: white;
   border-radius: 12px;
@@ -113,6 +113,18 @@
   color: #666;
   margin: 0;
   font-size: 16px;
+}
+
+.search-section {
+  margin-bottom: 15px;
+  padding: 15px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.search-section .search-container {
+  max-width: 100%;
 }
 
 .create-tournament-button {

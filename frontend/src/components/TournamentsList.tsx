@@ -488,27 +488,6 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
           <p className="tournaments-subtitle">Manage and track your tournaments</p>
         </div>
         <div className="header-actions">
-          <div className="search-container">
-            <span className="search-icon" aria-hidden="true">🔍</span>
-            <input
-              type="search"
-              className="search-input"
-              placeholder="Search tournaments..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search tournaments"
-            />
-            {searchQuery.trim() !== '' && (
-              <button
-                type="button"
-                className="search-clear-button"
-                onClick={() => setSearchQuery('')}
-                aria-label="Clear search"
-              >
-                ×
-              </button>
-            )}
-          </div>
           <div className="action-buttons">
             <button 
               onClick={handleDeleteAllTournaments} 
@@ -529,6 +508,30 @@ const TournamentsList: React.FC<TournamentsListProps> = ({ tournaments, onCreate
               Create New Tournament
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="search-section">
+        <div className="search-container">
+          <span className="search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="search"
+            className="search-input"
+            placeholder="Search tournaments..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search tournaments"
+          />
+          {searchQuery.trim() !== '' && (
+            <button
+              type="button"
+              className="search-clear-button"
+              onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
+            >
+              ×
+            </button>
+          )}
         </div>
       </div>
 

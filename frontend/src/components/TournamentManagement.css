@@ -55,6 +55,10 @@
   margin-left: 12px;
 }
 
+.tournament-info .role-badge {
+  margin-top: 8px;
+}
+
 .role-badge.admin {
   background-color: #2196F3;
   color: white;
@@ -63,6 +67,32 @@
 .role-badge.viewer {
   background-color: #4CAF50;
   color: white;
+}
+
+.role-switch-button {
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 10;
+  background: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.role-switch-button:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+.role-switch-button:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.role-switch-button:active {
+  transform: scale(0.95);
 }
 
 .viewer-mode {
