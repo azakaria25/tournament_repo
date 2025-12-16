@@ -50,6 +50,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   const [newTeam, setNewTeam] = useState({ name: '', players: ['', ''], weight: '' });
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [isTeamSectionVisible, setIsTeamSectionVisible] = useState(true);
+  const [hasManuallyToggled, setHasManuallyToggled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [isUpdatingTeam, setIsUpdatingTeam] = useState(false);
@@ -83,9 +84,12 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
   }, [championId]);
 
   // Hide Team Management section by default if tournament bracket (matches) exists
+  // Only set initial state, don't override manual toggles
   useEffect(() => {
-    setIsTeamSectionVisible(matches.length === 0);
-  }, [matches]);
+    if (!hasManuallyToggled) {
+      setIsTeamSectionVisible(matches.length === 0);
+    }
+  }, [matches, hasManuallyToggled]);
 
   const fetchTournamentDetails = useCallback(async (showLoading = false) => {
     if (showLoading) {
@@ -1006,7 +1010,10 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({ tournament,
           <div className="bracket-header">
             <h2>Tournament Bracket</h2>
             <button 
-              onClick={() => setIsTeamSectionVisible(!isTeamSectionVisible)}
+              onClick={() => {
+                setHasManuallyToggled(true);
+                setIsTeamSectionVisible(!isTeamSectionVisible);
+              }}
               className={`toggle-team-section ${!isTeamSectionVisible ? 'show' : 'hide'}`}
             >
               {isTeamSectionVisible ? 'Hide Teams' : 'Show Teams'}
